@@ -378,3 +378,52 @@ img {
     font-size: 20px !important;
   }
 }
+/* =========================
+   CORRECTION MOBILE JADCI
+========================= */
+
+html,
+body,
+#root {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 700px) {
+
+  .hero,
+  .cards,
+  .user-grid {
+    width: 100%;
+  }
+
+  .heroTitle {
+    overflow-wrap: break-word;
+  }
+
+  .heroCard {
+    width: 100%;
+  }
+
+  .card {
+    width: 100%;
+  }
+
+  .tableWrapper {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .announcementText {
+    word-break: break-word;
+  }
+
+  button {
+    max-width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+}
