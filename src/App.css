@@ -1,0 +1,198 @@
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #ffffff;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background: #6d28d9;
+  color: #ffffff;
+}
+
+/* ================================
+   TABLETTE
+================================ */
+
+@media (max-width: 1000px) {
+  .hero {
+    grid-template-columns: 1fr !important;
+    gap: 35px !important;
+    text-align: center;
+  }
+
+  .heroLeft {
+    max-width: 760px !important;
+    margin: 0 auto;
+  }
+
+  .heroRight {
+    width: 100%;
+  }
+
+  .heroCard {
+    margin: 0 auto;
+  }
+
+  .heroButtons {
+    justify-content: center;
+  }
+
+  .cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ================================
+   MOBILE
+================================ */
+
+@media (max-width: 700px) {
+  header {
+    position: relative !important;
+  }
+
+  .headerInner {
+    flex-direction: column !important;
+    padding: 15px !important;
+  }
+
+  .logo {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .logoText {
+    display: none;
+  }
+
+  .nav {
+    width: 100%;
+  }
+
+  .nav button {
+    flex: 1;
+    min-width: 110px;
+  }
+
+  .announcement {
+    flex-direction: column !important;
+  }
+
+  .announcementTitle {
+    text-align: center;
+    padding: 10px !important;
+  }
+
+  .announcementText {
+    padding: 10px !important;
+    font-size: 14px;
+  }
+
+  .main {
+    padding: 20px 15px 50px !important;
+  }
+
+  .hero {
+    min-height: auto !important;
+    padding: 25px 0 45px !important;
+  }
+
+  .heroTitle {
+    font-size: clamp(42px, 13vw, 62px) !important;
+    letter-spacing: -2px !important;
+  }
+
+  .heroText {
+    font-size: 17px !important;
+  }
+
+  .heroCard {
+    min-height: 390px !important;
+    padding: 30px 20px !important;
+  }
+
+  .heroLogo {
+    width: 145px !important;
+    height: 145px !important;
+  }
+
+  .heroBrand {
+    font-size: 21px !important;
+  }
+
+  .heroMission {
+    font-size: 17px !important;
+  }
+
+  .cards {
+    grid-template-columns: 1fr !important;
+  }
+
+  .sectionTitle {
+    font-size: 28px !important;
+  }
+
+  .adminBox {
+    padding: 22px !important;
+  }
+}
+
+/* ================================
+   PETIT MOBILE
+================================ */
+
+@media (max-width: 430px) {
+  .nav button {
+    min-width: 100%;
+  }
+
+  .logoImage {
+    width: 55px !important;
+    height: 55px !important;
+  }
+
+  .logoTitle {
+    font-size: 24px !important;
+  }
+
+  .heroButtons {
+    flex-direction: column;
+  }
+
+  .heroButtons button {
+    width: 100%;
+  }
+}
