@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import logoJadci from "./assets/logo-jadci.png";
+import heroJeunesse1 from "./assets/hero-jeunesse-1.jpg";
+import heroJeunesse2 from "./assets/hero-jeunesse-2.jpg";
+import heroJeunesse3 from "./assets/hero-jeunesse-3.jpg";
 import "./App.css";
 
 const demandesInitiales = [
@@ -168,6 +171,28 @@ const nouvelleEgliseInitiale = {
   localisation: "",
 };
 
+const heroBackgrounds = [heroJeunesse1, heroJeunesse2, heroJeunesse3];
+
+const connexionJeuneInitiale = { email: "", motDePasse: "" };
+const compteJeuneInitial = {
+  nom: "",
+  telephone: "",
+  email: "",
+  ville: "",
+  motDePasse: "",
+  confirmation: "",
+};
+const connexionResponsableInitiale = { email: "", motDePasse: "" };
+const compteResponsableInitial = {
+  nom: "",
+  telephone: "",
+  email: "",
+  ville: "",
+  responsabilite: "",
+  motDePasse: "",
+  confirmation: "",
+};
+
 function App() {
   const [page, setPage] = useState("accueil");
   const [adminConnecte, setAdminConnecte] = useState(false);
@@ -265,6 +290,31 @@ function App() {
   });
   const [leaderForm, setLeaderForm] = useState(leaderMois);
 
+  // --- Espace Jeunes (🟨) ---
+  const [comptesJeunes, setComptesJeunes] = useLocalStorageState("jadci_comptes_jeunes", []);
+  const [jeuneConnecte, setJeuneConnecte] = useLocalStorageState("jadci_jeune_session", null);
+  const [modeEspaceJeune, setModeEspaceJeune] = useState("connexion");
+  const [connexionJeune, setConnexionJeune] = useState(connexionJeuneInitiale);
+  const [compteJeune, setCompteJeune] = useState(compteJeuneInitial);
+  const [messageEspaceJeune, setMessageEspaceJeune] = useState("");
+
+  // --- Espace Responsable (🟩) ---
+  const [comptesResponsables, setComptesResponsables] = useLocalStorageState("jadci_comptes_responsables", []);
+  const [responsableConnecte, setResponsableConnecte] = useLocalStorageState("jadci_responsable_session", null);
+  const [modeEspaceResponsable, setModeEspaceResponsable] = useState("connexion");
+  const [connexionResponsable, setConnexionResponsable] = useState(connexionResponsableInitiale);
+  const [compteResponsable, setCompteResponsable] = useState(compteResponsableInitial);
+  const [messageEspaceResponsable, setMessageEspaceResponsable] = useState("");
+
+  // --- Espace Gérant (👤) ---
+  const [gerantConnecte, setGerantConnecte] = useState(false);
+  const [motDePasseGerant, setMotDePasseGerant] = useState("");
+  const [erreurGerant, setErreurGerant] = useState("");
+  const [messageGerant, setMessageGerant] = useState("");
+
+  // --- Accueil : rotation des 3 images de fond ---
+  const [indexFond, setIndexFond] = useState(0);
+
   useEffect(() => {
     if (annonces.length < 2) return undefined;
 
@@ -275,10 +325,19 @@ function App() {
     return () => window.clearInterval(timer);
   }, [annonces.length]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setIndexFond((index) => (index + 1) % heroBackgrounds.length);
+    }, 6000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const navItems = [
     ["accueil", "ACCUEIL"],
     ["portail", "PORTAIL"],
     ["utilisateurs", "UTILISATEURS"],
+    ["espaces", "ESPACES"],
     ["eglises", "ÉGLISES"],
     ["medias", "DIRECT & PRÉDICATIONS"],
     ["boutique", "BOUTIQUE"],
@@ -429,11 +488,52 @@ function App() {
       return;
     }
 
+    const commandeTotal = totalPanier;
+
     setCommandeMessage(
       `Commande enregistrée pour un montant de ${totalPanier.toLocaleString(
         "fr-FR"
       )} FCFA. Le traitement de la commande sera effectué par l'administration.`
     );
+
+    if (jeuneConnecte) {
+      setComptesJeunes((liste) =>
+        liste.map((compte) =>
+          compte.id === jeuneConnecte.id
+            ? {
+                ...compte,
+                commandes: [
+                  {
+                    id: Date.now(),
+                    articles: panier.map((item) => ({ nom: item.nom, quantite: item.quantite, prix: item.prix })),
+                    total: commandeTotal,
+                    date: new Date().toLocaleDateString("fr-FR"),
+                    statut: "EN COURS",
+                  },
+                  ...(compte.commandes || []),
+                ],
+              }
+            : compte
+        )
+      );
+      setJeuneConnecte((session) =>
+        session
+          ? {
+              ...session,
+              commandes: [
+                {
+                  id: Date.now(),
+                  articles: panier.map((item) => ({ nom: item.nom, quantite: item.quantite, prix: item.prix })),
+                  total: commandeTotal,
+                  date: new Date().toLocaleDateString("fr-FR"),
+                  statut: "EN COURS",
+                },
+                ...(session.commandes || []),
+              ],
+            }
+          : session
+      );
+    }
 
     setPanier([]);
   };
@@ -597,6 +697,189 @@ function App() {
     setAdminMessage("Jeune leader du mois mis à jour.");
   };
 
+  // --- Logique Espace Jeunes ---
+  const creerCompteJeune = (event) => {
+    event.preventDefault();
+    const { nom, telephone, email, ville, motDePasse: mdp, confirmation } = compteJeune;
+
+    if (!nom.trim() || !telephone.trim() || !email.trim() || !ville.trim() || !mdp.trim()) {
+      setMessageEspaceJeune("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (mdp !== confirmation) {
+      setMessageEspaceJeune("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (comptesJeunes.some((c) => c.email.toLowerCase() === email.trim().toLowerCase())) {
+      setMessageEspaceJeune("Un compte existe déjà avec cet e-mail.");
+      return;
+    }
+
+    const matricule = genererMatricule(nom);
+    const nouveauCompte = {
+      id: Date.now(),
+      nom: nom.trim(),
+      telephone: telephone.trim(),
+      email: email.trim(),
+      ville: ville.trim(),
+      motDePasse: mdp,
+      matricule,
+      commandes: [],
+      requetes: [],
+    };
+
+    setComptesJeunes((liste) => [...liste, nouveauCompte]);
+    setJeuneConnecte(nouveauCompte);
+    setCompteJeune(compteJeuneInitial);
+    setMessageEspaceJeune("");
+  };
+
+  const connecterJeune = (event) => {
+    event.preventDefault();
+    const compte = comptesJeunes.find(
+      (c) => c.email.toLowerCase() === connexionJeune.email.trim().toLowerCase()
+    );
+
+    if (!compte || compte.motDePasse !== connexionJeune.motDePasse) {
+      setMessageEspaceJeune("E-mail ou mot de passe incorrect.");
+      return;
+    }
+
+    setJeuneConnecte(compte);
+    setConnexionJeune(connexionJeuneInitiale);
+    setMessageEspaceJeune("");
+  };
+
+  const deconnecterJeune = () => {
+    setJeuneConnecte(null);
+    setModeEspaceJeune("connexion");
+    setMessageEspaceJeune("");
+  };
+
+  const soumettreRequeteJeune = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const texte = (form.get("requete") || "").toString().trim();
+    if (!texte || !jeuneConnecte) return;
+
+    const requete = { id: Date.now(), texte, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" };
+
+    setComptesJeunes((liste) =>
+      liste.map((c) =>
+        c.id === jeuneConnecte.id ? { ...c, requetes: [requete, ...(c.requetes || [])] } : c
+      )
+    );
+    setJeuneConnecte((session) => ({ ...session, requetes: [requete, ...(session.requetes || [])] }));
+    event.target.reset();
+  };
+
+  // --- Logique Espace Responsable ---
+  const creerCompteResponsable = (event) => {
+    event.preventDefault();
+    const { nom, telephone, email, ville, responsabilite, motDePasse: mdp, confirmation } = compteResponsable;
+
+    if (!nom.trim() || !telephone.trim() || !email.trim() || !ville.trim() || !mdp.trim()) {
+      setMessageEspaceResponsable("Veuillez remplir tous les champs obligatoires.");
+      return;
+    }
+
+    if (mdp !== confirmation) {
+      setMessageEspaceResponsable("Les mots de passe ne correspondent pas.");
+      return;
+    }
+
+    if (comptesResponsables.some((c) => c.email.toLowerCase() === email.trim().toLowerCase())) {
+      setMessageEspaceResponsable("Un compte existe déjà avec cet e-mail.");
+      return;
+    }
+
+    const nouveauCompte = {
+      id: Date.now(),
+      nom: nom.trim(),
+      telephone: telephone.trim(),
+      email: email.trim(),
+      ville: ville.trim(),
+      responsabilite: responsabilite.trim(),
+      motDePasse: mdp,
+      soumissions: [],
+      commandes: [],
+    };
+
+    setComptesResponsables((liste) => [...liste, nouveauCompte]);
+    setResponsableConnecte(nouveauCompte);
+    setCompteResponsable(compteResponsableInitial);
+    setMessageEspaceResponsable("");
+  };
+
+  const connecterResponsable = (event) => {
+    event.preventDefault();
+    const compte = comptesResponsables.find(
+      (c) => c.email.toLowerCase() === connexionResponsable.email.trim().toLowerCase()
+    );
+
+    if (!compte || compte.motDePasse !== connexionResponsable.motDePasse) {
+      setMessageEspaceResponsable("E-mail ou mot de passe incorrect.");
+      return;
+    }
+
+    setResponsableConnecte(compte);
+    setConnexionResponsable(connexionResponsableInitiale);
+    setMessageEspaceResponsable("");
+  };
+
+  const deconnecterResponsable = () => {
+    setResponsableConnecte(null);
+    setModeEspaceResponsable("connexion");
+    setMessageEspaceResponsable("");
+  };
+
+  const soumettreProjetResponsable = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const titre = (form.get("titre") || "").toString().trim();
+    const description = (form.get("description") || "").toString().trim();
+    if (!titre || !responsableConnecte) return;
+
+    const soumission = { id: Date.now(), titre, description, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" };
+
+    setComptesResponsables((liste) =>
+      liste.map((c) =>
+        c.id === responsableConnecte.id ? { ...c, soumissions: [soumission, ...(c.soumissions || [])] } : c
+      )
+    );
+    setResponsableConnecte((session) => ({ ...session, soumissions: [soumission, ...(session.soumissions || [])] }));
+    event.target.reset();
+  };
+
+  // --- Logique Espace Gérant ---
+  const connecterGerant = () => {
+    if (motDePasseGerant === "GERANT2026") {
+      setGerantConnecte(true);
+      setErreurGerant("");
+      setMotDePasseGerant("");
+    } else {
+      setErreurGerant("Mot de passe gérant incorrect.");
+    }
+  };
+
+  const deconnecterGerant = () => {
+    setGerantConnecte(false);
+    setErreurGerant("");
+    setMessageGerant("");
+  };
+
+  const supprimerAnnonceGerant = (index) => {
+    setAnnonces((liste) => liste.filter((_, i) => i !== index));
+    setMessageGerant("Annonce supprimée.");
+  };
+
+  const supprimerProduitGerant = (id) => {
+    setProduits((liste) => liste.filter((item) => item.id !== id));
+    setMessageGerant("Produit supprimé.");
+  };
+
   const eglisesFiltrees = eglises.filter((eglise) => !eglise.statut || eglise.statut === "VALIDÉE").filter((eglise) => {
     const recherche = rechercheEglise.toLowerCase().trim();
 
@@ -715,31 +998,47 @@ function App() {
       gap: "60px",
       minHeight: "620px",
       marginBottom: "80px",
+      borderRadius: "35px",
+      padding: "40px",
+    },
+    heroBackgroundLayer: (url, actif) => ({
+      position: "absolute",
+      inset: 0,
+      backgroundImage: `linear-gradient(180deg, rgba(15,10,35,.72), rgba(15,10,35,.86)), url(${url})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      opacity: actif ? 1 : 0,
+      transition: "opacity 1.8s ease-in-out",
+      zIndex: 0,
+    }),
+    heroContent: {
+      position: "relative",
+      zIndex: 1,
     },
     badge: {
       display: "inline-flex",
       padding: "9px 16px",
       borderRadius: "999px",
-      background: "#f1eaff",
-      border: "1px solid #dfd0ff",
-      color: "#5420a8",
+      background: "rgba(241,234,255,.15)",
+      border: "1px solid rgba(223,208,255,.35)",
+      color: "#e9d8ff",
       fontWeight: 850,
       fontSize: "14px",
       marginBottom: "22px",
     },
     heroTitle: {
       margin: 0,
-      color: "#111827",
+      color: "#ffffff",
       fontSize: "clamp(44px, 5.5vw, 76px)",
       lineHeight: 1,
       letterSpacing: "-3px",
       fontWeight: 950,
     },
-    purple: { color: "#6428c7" },
+    purple: { color: "#c9a8ff" },
     heroText: {
       maxWidth: "700px",
       margin: "28px 0",
-      color: "#60728b",
+      color: "rgba(255,255,255,.82)",
       fontSize: "19px",
       lineHeight: 1.7,
     },
@@ -770,6 +1069,8 @@ function App() {
       cursor: "pointer",
     },
     heroCard: {
+      position: "relative",
+      zIndex: 1,
       animation: "heroFloat 7s ease-in-out infinite",
       minHeight: "530px",
       borderRadius: "35px",
@@ -782,7 +1083,6 @@ function App() {
       justifyContent: "center",
       alignItems: "center",
       textAlign: "center",
-      position: "relative",
       overflow: "hidden",
       boxShadow: "0 30px 70px rgba(79,32,150,.22)",
     },
@@ -965,12 +1265,47 @@ function App() {
       padding: "5px",
       marginBottom: "14px",
     },
+    espaceCard: (couleur) => ({
+      background: "#ffffff",
+      border: `1px solid ${couleur}33`,
+      borderRadius: "24px",
+      padding: "30px",
+      boxShadow: "0 16px 40px rgba(30,41,59,.06)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "14px",
+    }),
+    espaceIcone: (couleur) => ({
+      width: "58px",
+      height: "58px",
+      borderRadius: "16px",
+      background: `${couleur}1f`,
+      display: "grid",
+      placeItems: "center",
+      fontSize: "26px",
+      marginBottom: "4px",
+    }),
+    espaceBadge: (couleur) => ({
+      display: "inline-block",
+      alignSelf: "flex-start",
+      padding: "5px 12px",
+      borderRadius: "999px",
+      background: `${couleur}1a`,
+      color: couleur,
+      fontSize: "12px",
+      fontWeight: 900,
+      letterSpacing: ".4px",
+    }),
   };
 
   const renderAccueil = () => (
     <>
       <section style={styles.hero}>
-        <div>
+        {heroBackgrounds.map((url, i) => (
+          <div key={url} style={styles.heroBackgroundLayer(url, i === indexFond)} />
+        ))}
+
+        <div style={styles.heroContent}>
           <div style={styles.badge}>PLATEFORME OFFICIELLE JADCI</div>
 
           <h1 className="reveal reveal-delay-1" style={styles.heroTitle}>
@@ -1034,12 +1369,12 @@ function App() {
             [
               "ESPACE JEUNE",
               "Inscription, profil, matricule, CV, photo et carte jeune JADCI.",
-              "utilisateurs",
+              "espaces",
             ],
             [
               "RESPONSABLES RÉGIONAUX",
               "Gestion des églises, projets, propositions et informations régionales.",
-              "utilisateurs",
+              "espaces",
             ],
             [
               "ÉGLISES",
@@ -2003,6 +2338,331 @@ function App() {
     </section>
   );
 
+  const renderEspaces = () => (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>ESPACES JADCI</h2>
+        <p style={styles.sectionText}>
+          Chaque espace dispose d'un accès protégé selon le profil : jeune, responsable régional ou gérant.
+        </p>
+      </div>
+
+      <div style={styles.cards}>
+        <div style={styles.espaceCard("#ca8a04")}>
+          <div style={styles.espaceIcone("#ca8a04")}>🟨</div>
+          <span style={styles.espaceBadge("#ca8a04")}>ESPACE JEUNE</span>
+          <h3 style={styles.cardTitle}>{jeuneConnecte ? `Bonjour ${jeuneConnecte.nom.split(" ")[0]}` : "Espace Jeunes"}</h3>
+          <p style={styles.cardText}>Accès protégé aux achats, commandes et requêtes.</p>
+          {jeuneConnecte ? (
+            <button type="button" style={styles.button} onClick={() => aller("espace-jeune")}>OUVRIR MON ESPACE</button>
+          ) : (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button type="button" style={styles.button} onClick={() => { setModeEspaceJeune("connexion"); aller("espace-jeune"); }}>SE CONNECTER</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => { setModeEspaceJeune("creation"); aller("espace-jeune"); }}>CRÉER UN COMPTE</button>
+            </div>
+          )}
+        </div>
+
+        <div style={styles.espaceCard("#16a34a")}>
+          <div style={styles.espaceIcone("#16a34a")}>🟩</div>
+          <span style={styles.espaceBadge("#16a34a")}>ESPACE RESPONSABLE</span>
+          <h3 style={styles.cardTitle}>{responsableConnecte ? `Bonjour ${responsableConnecte.nom.split(" ")[0]}` : "Espace Responsable"}</h3>
+          <p style={styles.cardText}>Accès protégé aux soumissions et commandes.</p>
+          {responsableConnecte ? (
+            <button type="button" style={styles.button} onClick={() => aller("espace-responsable")}>OUVRIR MON ESPACE</button>
+          ) : (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button type="button" style={styles.button} onClick={() => { setModeEspaceResponsable("connexion"); aller("espace-responsable"); }}>SE CONNECTER</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => { setModeEspaceResponsable("creation"); aller("espace-responsable"); }}>CRÉER UN COMPTE</button>
+            </div>
+          )}
+        </div>
+
+        <div style={styles.espaceCard("#334155")}>
+          <div style={styles.espaceIcone("#334155")}>👤</div>
+          <span style={styles.espaceBadge("#334155")}>ESPACE GÉRANT</span>
+          <h3 style={styles.cardTitle}>Espace Gérant</h3>
+          <p style={styles.cardText}>Suppression rapide d'une annonce ou d'un produit.</p>
+          <button type="button" style={styles.button} onClick={() => aller("espace-gerant")}>ACCÉDER À L'ESPACE</button>
+        </div>
+      </div>
+    </section>
+  );
+
+  const renderEspaceJeune = () => {
+    if (!jeuneConnecte) {
+      return (
+        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
+          <div style={styles.adminBox}>
+            <span style={styles.espaceBadge("#ca8a04")}>🟨 ESPACE JEUNE</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "12px" }}>
+              {modeEspaceJeune === "connexion" ? "Se connecter" : "Créer un compte"}
+            </h2>
+            <p style={styles.sectionText}>Accès protégé aux achats, commandes et requêtes.</p>
+
+            <div style={{ display: "flex", gap: "8px", margin: "18px 0" }}>
+              <button type="button" style={modeEspaceJeune === "connexion" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceJeune("connexion"); setMessageEspaceJeune(""); }}>SE CONNECTER</button>
+              <button type="button" style={modeEspaceJeune === "creation" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceJeune("creation"); setMessageEspaceJeune(""); }}>CRÉER UN COMPTE</button>
+            </div>
+
+            {modeEspaceJeune === "connexion" ? (
+              <form onSubmit={connecterJeune}>
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={connexionJeune.email} onChange={(e) => setConnexionJeune((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={connexionJeune.motDePasse} onChange={(e) => setConnexionJeune((c) => ({ ...c, motDePasse: e.target.value }))} />
+                {messageEspaceJeune && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceJeune}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>SE CONNECTER</button>
+              </form>
+            ) : (
+              <form onSubmit={creerCompteJeune}>
+                <label style={styles.label}>NOM ET PRÉNOMS *</label>
+                <input required style={styles.input} value={compteJeune.nom} onChange={(e) => setCompteJeune((c) => ({ ...c, nom: e.target.value }))} />
+                <label style={styles.label}>TÉLÉPHONE *</label>
+                <input required style={styles.input} value={compteJeune.telephone} onChange={(e) => setCompteJeune((c) => ({ ...c, telephone: e.target.value }))} />
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={compteJeune.email} onChange={(e) => setCompteJeune((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>VILLE *</label>
+                <input required style={styles.input} value={compteJeune.ville} onChange={(e) => setCompteJeune((c) => ({ ...c, ville: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={compteJeune.motDePasse} onChange={(e) => setCompteJeune((c) => ({ ...c, motDePasse: e.target.value }))} />
+                <label style={styles.label}>CONFIRMATION DU MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={compteJeune.confirmation} onChange={(e) => setCompteJeune((c) => ({ ...c, confirmation: e.target.value }))} />
+                {messageEspaceJeune && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceJeune}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>CRÉER MON COMPTE</button>
+              </form>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section style={styles.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+          <div>
+            <span style={styles.espaceBadge("#ca8a04")}>🟨 ESPACE JEUNE</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>{jeuneConnecte.nom}</h2>
+            <p style={styles.sectionText}>Matricule : {jeuneConnecte.matricule} • {jeuneConnecte.ville}</p>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={deconnecterJeune}>DÉCONNEXION</button>
+        </div>
+
+        <div style={styles.cards}>
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>MES COMMANDES</h3>
+            {(jeuneConnecte.commandes || []).length === 0 ? (
+              <p style={styles.sectionText}>Aucune commande pour le moment. Rendez-vous dans la boutique.</p>
+            ) : (
+              (jeuneConnecte.commandes || []).map((cmd) => (
+                <div key={cmd.id} style={{ padding: "12px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{cmd.date} — {cmd.total.toLocaleString("fr-FR")} FCFA</strong>
+                  <div style={{ color: "#64748b", fontSize: "14px" }}>{cmd.articles.map((a) => `${a.nom} x${a.quantite}`).join(", ")}</div>
+                  <span style={{ color: "#2456d8", fontWeight: 800, fontSize: "13px" }}>{cmd.statut}</span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>MES REQUÊTES</h3>
+            <form onSubmit={soumettreRequeteJeune}>
+              <textarea name="requete" required placeholder="Décrivez votre requête..." style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>ENVOYER LA REQUÊTE</button>
+            </form>
+            <div style={{ marginTop: "16px" }}>
+              {(jeuneConnecte.requetes || []).length === 0 ? (
+                <p style={styles.sectionText}>Aucune requête envoyée.</p>
+              ) : (
+                (jeuneConnecte.requetes || []).map((r) => (
+                  <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                    <p style={{ margin: 0 }}>{r.texte}</p>
+                    <span style={{ color: "#64748b", fontSize: "12px" }}>{r.date} • {r.statut}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  const renderEspaceResponsable = () => {
+    if (!responsableConnecte) {
+      return (
+        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
+          <div style={styles.adminBox}>
+            <span style={styles.espaceBadge("#16a34a")}>🟩 ESPACE RESPONSABLE</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "12px" }}>
+              {modeEspaceResponsable === "connexion" ? "Se connecter" : "Créer un compte"}
+            </h2>
+            <p style={styles.sectionText}>Accès protégé aux soumissions et commandes.</p>
+
+            <div style={{ display: "flex", gap: "8px", margin: "18px 0" }}>
+              <button type="button" style={modeEspaceResponsable === "connexion" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceResponsable("connexion"); setMessageEspaceResponsable(""); }}>SE CONNECTER</button>
+              <button type="button" style={modeEspaceResponsable === "creation" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceResponsable("creation"); setMessageEspaceResponsable(""); }}>CRÉER UN COMPTE</button>
+            </div>
+
+            {modeEspaceResponsable === "connexion" ? (
+              <form onSubmit={connecterResponsable}>
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={connexionResponsable.email} onChange={(e) => setConnexionResponsable((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={connexionResponsable.motDePasse} onChange={(e) => setConnexionResponsable((c) => ({ ...c, motDePasse: e.target.value }))} />
+                {messageEspaceResponsable && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceResponsable}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>SE CONNECTER</button>
+              </form>
+            ) : (
+              <form onSubmit={creerCompteResponsable}>
+                <label style={styles.label}>NOM ET PRÉNOMS *</label>
+                <input required style={styles.input} value={compteResponsable.nom} onChange={(e) => setCompteResponsable((c) => ({ ...c, nom: e.target.value }))} />
+                <label style={styles.label}>TÉLÉPHONE *</label>
+                <input required style={styles.input} value={compteResponsable.telephone} onChange={(e) => setCompteResponsable((c) => ({ ...c, telephone: e.target.value }))} />
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={compteResponsable.email} onChange={(e) => setCompteResponsable((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>VILLE *</label>
+                <input required style={styles.input} value={compteResponsable.ville} onChange={(e) => setCompteResponsable((c) => ({ ...c, ville: e.target.value }))} />
+                <label style={styles.label}>RESPONSABILITÉ</label>
+                <input style={styles.input} value={compteResponsable.responsabilite} onChange={(e) => setCompteResponsable((c) => ({ ...c, responsabilite: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={compteResponsable.motDePasse} onChange={(e) => setCompteResponsable((c) => ({ ...c, motDePasse: e.target.value }))} />
+                <label style={styles.label}>CONFIRMATION DU MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={compteResponsable.confirmation} onChange={(e) => setCompteResponsable((c) => ({ ...c, confirmation: e.target.value }))} />
+                {messageEspaceResponsable && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceResponsable}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>CRÉER MON COMPTE</button>
+              </form>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section style={styles.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+          <div>
+            <span style={styles.espaceBadge("#16a34a")}>🟩 ESPACE RESPONSABLE</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>{responsableConnecte.nom}</h2>
+            <p style={styles.sectionText}>{responsableConnecte.responsabilite || "Responsable régional"} • {responsableConnecte.ville}</p>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={deconnecterResponsable}>DÉCONNEXION</button>
+        </div>
+
+        <div style={styles.cards}>
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>NOUVELLE SOUMISSION</h3>
+            <form onSubmit={soumettreProjetResponsable}>
+              <label style={styles.label}>TITRE *</label>
+              <input name="titre" required style={styles.input} />
+              <label style={styles.label}>DESCRIPTION</label>
+              <textarea name="description" style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>SOUMETTRE</button>
+            </form>
+          </div>
+
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>MES SOUMISSIONS</h3>
+            {(responsableConnecte.soumissions || []).length === 0 ? (
+              <p style={styles.sectionText}>Aucune soumission envoyée.</p>
+            ) : (
+              (responsableConnecte.soumissions || []).map((s) => (
+                <div key={s.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{s.titre}</strong>
+                  <p style={{ margin: "4px 0", color: "#64748b" }}>{s.description}</p>
+                  <span style={{ color: "#64748b", fontSize: "12px" }}>{s.date} • {s.statut}</span>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>MES COMMANDES</h3>
+            {(responsableConnecte.commandes || []).length === 0 ? (
+              <p style={styles.sectionText}>Aucune commande enregistrée.</p>
+            ) : (
+              (responsableConnecte.commandes || []).map((cmd) => (
+                <div key={cmd.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{cmd.date} — {Number(cmd.total || 0).toLocaleString("fr-FR")} FCFA</strong>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  };
+
+  const renderEspaceGerant = () => {
+    if (!gerantConnecte) {
+      return (
+        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
+          <div style={styles.adminBox}>
+            <span style={styles.espaceBadge("#334155")}>👤 ESPACE GÉRANT</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "12px" }}>Accès gérant</h2>
+            <p style={styles.sectionText}>Cet espace permet de supprimer rapidement une annonce ou un produit.</p>
+
+            <label style={styles.label}>MOT DE PASSE GÉRANT</label>
+            <input
+              type="password"
+              style={styles.input}
+              value={motDePasseGerant}
+              onChange={(e) => { setMotDePasseGerant(e.target.value); if (erreurGerant) setErreurGerant(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") connecterGerant(); }}
+              placeholder="Entrez le mot de passe"
+            />
+            {erreurGerant && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{erreurGerant}</p>}
+            <button type="button" style={{ ...styles.button, width: "100%" }} onClick={connecterGerant}>SE CONNECTER</button>
+          </div>
+        </section>
+      );
+    }
+
+    return (
+      <section style={styles.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
+          <div>
+            <span style={styles.espaceBadge("#334155")}>👤 ESPACE GÉRANT</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>Gestion rapide</h2>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={deconnecterGerant}>DÉCONNEXION</button>
+        </div>
+
+        {messageGerant && <div className="admin-success" style={{ marginBottom: "20px" }}>{messageGerant}</div>}
+
+        <div style={styles.cards}>
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>SUPPRIMER UNE ANNONCE</h3>
+            {annonces.length === 0 ? (
+              <p style={styles.sectionText}>Aucune annonce à afficher.</p>
+            ) : (
+              annonces.map((texte, index) => (
+                <div key={`${texte}-${index}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <span>{texte}</span>
+                  <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerAnnonceGerant(index)}>SUPPRIMER</button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>SUPPRIMER UN PRODUIT</h3>
+            {produits.length === 0 ? (
+              <p style={styles.sectionText}>Aucun produit à afficher.</p>
+            ) : (
+              produits.map((p) => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <span>{p.nom} — {Number(p.prix).toLocaleString("fr-FR")} FCFA</span>
+                  <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerProduitGerant(p.id)}>SUPPRIMER</button>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  };
+
   const renderEglises = () => (
     <>
       <section style={styles.section}>
@@ -2764,6 +3424,10 @@ function App() {
         {page === "accueil" && renderAccueil()}
         {page === "portail" && renderPortail()}
         {page === "utilisateurs" && renderUtilisateurs()}
+        {page === "espaces" && renderEspaces()}
+        {page === "espace-jeune" && renderEspaceJeune()}
+        {page === "espace-responsable" && renderEspaceResponsable()}
+        {page === "espace-gerant" && renderEspaceGerant()}
         {page === "eglises" && renderEglises()}
         {page === "medias" && renderMedias()}
         {page === "boutique" && renderBoutique()}
