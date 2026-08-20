@@ -1,0 +1,2813 @@
+import { useEffect, useMemo, useState } from "react";
+import logoJadci from "./assets/logo-jadci.png";
+import "./App.css";
+
+const demandesInitiales = [
+  {
+    id: 1,
+    type: "JEUNE",
+    nom: "Kouassi Jean",
+    telephone: "07 00 00 00 00",
+    ville: "Abidjan",
+    statut: "EN ATTENTE",
+  },
+  {
+    id: 2,
+    type: "RESPONSABLE RÉGIONAL",
+    nom: "Yao Marie",
+    telephone: "05 00 00 00 00",
+    ville: "Bouaké",
+    statut: "EN ATTENTE",
+  },
+];
+
+const eglisesInitiales = [
+  {
+    id: 1,
+    nom: "AD Temple de la Grâce",
+    pasteur: "Pasteur responsable",
+    ville: "Abidjan",
+    commune: "Cocody",
+    quartier: "Riviera",
+    localisation: "",
+  },
+  {
+    id: 2,
+    nom: "AD Temple de la Gloire",
+    pasteur: "Pasteur responsable",
+    ville: "Abidjan",
+    commune: "Yopougon",
+    quartier: "Selmer",
+    localisation: "",
+  },
+  {
+    id: 3,
+    nom: "AD Temple de la Victoire",
+    pasteur: "Pasteur responsable",
+    ville: "Bouaké",
+    commune: "Bouaké",
+    quartier: "Centre",
+    localisation: "",
+  },
+];
+
+const produitsInitiaux = [
+  {
+    id: 1,
+    nom: "Livre évangélique",
+    categorie: "LIVRES",
+    prix: 5000,
+    description: "Ressource chrétienne disponible dans la boutique JADCI.",
+  },
+  {
+    id: 2,
+    nom: "Vêtement JADCI",
+    categorie: "VÊTEMENTS",
+    prix: 10000,
+    description: "Vêtement officiel JADCI.",
+  },
+  {
+    id: 3,
+    nom: "Gadget JADCI",
+    categorie: "GADGETS",
+    prix: 5000,
+    description: "Accessoire JADCI.",
+  },
+  {
+    id: 4,
+    nom: "Carte Jeune JADCI",
+    categorie: "SERVICES",
+    prix: 1000,
+    description: "Carte physique Jeune JADCI.",
+  },
+];
+
+const mediasInitiales = [
+  {
+    id: 1,
+    type: "PRÉDICATION",
+    titre: "Grandir dans la foi et servir avec excellence",
+    intervenant: "Prédication JADCI",
+    date: "Cette semaine",
+    description: "Retrouvez les enseignements et messages qui encouragent la jeunesse à vivre sa foi au quotidien.",
+    url: "https://www.youtube.com/results?search_query=JADCI+prédication",
+  },
+  {
+    id: 2,
+    type: "PRÉDICATION",
+    titre: "Jeunesse, foi, mission et engagement",
+    intervenant: "JADCI Média",
+    date: "À découvrir",
+    description: "Une sélection de contenus pour nourrir la foi, développer les talents et servir l'Église.",
+    url: "https://www.youtube.com/results?search_query=JADCI+jeunesse",
+  },
+  {
+    id: 3,
+    type: "ÉVÉNEMENT",
+    titre: "Prochain grand rendez-vous JADCI",
+    intervenant: "Communication JADCI",
+    date: "Bientôt",
+    description: "Les informations officielles, programmes et directs seront centralisés ici.",
+    url: "https://www.youtube.com/results?search_query=JADCI",
+  },
+];
+
+const directInitial = {
+  actif: false,
+  titre: "Direct JADCI",
+  sousTitre: "Le direct officiel sera disponible ici.",
+  url: "https://www.youtube.com/@JADCI",
+};
+
+const inscriptionInitiale = {
+  nom: "",
+  telephone: "",
+  email: "",
+  ville: "",
+  commune: "",
+  quartier: "",
+  statutSocial: "",
+  statutMatrimonial: "",
+  sexe: "",
+  eglise: "",
+  departement: "",
+  responsabilite: "",
+  motDePasse: "",
+  cv: null,
+  photo: null,
+};
+
+
+function useLocalStorageState(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Local storage can be unavailable in some browser modes.
+    }
+  }, [key, value]);
+
+  return [value, setValue];
+}
+
+const nouvelleEgliseInitiale = {
+  nom: "",
+  pasteur: "",
+  ville: "",
+  commune: "",
+  quartier: "",
+  localisation: "",
+};
+
+function App() {
+  const [page, setPage] = useState("accueil");
+  const [adminConnecte, setAdminConnecte] = useState(false);
+  const [motDePasse, setMotDePasse] = useState("");
+  const [erreur, setErreur] = useState("");
+
+  const [demandes, setDemandes] = useLocalStorageState("jadci_demandes", demandesInitiales);
+  const [annonce, setAnnonce] = useState("");
+  const [annonces, setAnnonces] = useLocalStorageState("jadci_annonces", [
+    "Bienvenue sur la plateforme officielle JADCI.",
+    "Les inscriptions des jeunes et responsables régionaux sont ouvertes.",
+    "Carte Jeune JADCI : 1 000 FCFA.",
+  ]);
+
+  const [eglises, setEglises] = useLocalStorageState("jadci_eglises", eglisesInitiales.map((e) => ({ ...e, statut: e.statut || "VALIDÉE" })));
+  const [rechercheEglise, setRechercheEglise] = useState("");
+
+  const [produits, setProduits] = useLocalStorageState("jadci_produits", produitsInitiaux.map((p) => ({ ...p, nature: p.nature || p.categorie, stock: p.stock ?? 10, appreciation: p.appreciation ?? 5 })));
+  const [panier, setPanier] = useState([]);
+
+  const [typeInscription, setTypeInscription] = useState("JEUNE");
+  const [inscription, setInscription] = useState(inscriptionInitiale);
+  const [inscriptionMessage, setInscriptionMessage] = useState("");
+
+  const [nouvelleEglise, setNouvelleEglise] = useState(
+    nouvelleEgliseInitiale
+  );
+
+  const [commandeMessage, setCommandeMessage] = useState("");
+  const [annonceActive, setAnnonceActive] = useState(0);
+  const [medias] = useState(mediasInitiales);
+  const [direct, setDirect] = useState(directInitial);
+  const [mediaFiltre, setMediaFiltre] = useState("TOUT");
+
+  const [articles, setArticles] = useLocalStorageState("jadci_articles", [
+    {
+      id: 1,
+      titre: "Bienvenue sur la plateforme officielle JADCI",
+      contenu: "Retrouvez ici les actualités, programmes et ressources de la jeunesse.",
+      image: "",
+      datePublication: new Date().toISOString().slice(0, 10),
+      dateEvenement: "",
+      categorie: "ACTUALITÉ",
+    },
+  ]);
+
+  const [projets, setProjets] = useLocalStorageState("jadci_projets", [
+    {
+      id: 1,
+      titre: "Soutenir un projet jeunesse",
+      description: "Participez librement au financement des initiatives de la jeunesse JADCI.",
+      objectif: 1000000,
+      collecte: 0,
+      image: "",
+      actif: true,
+    },
+  ]);
+
+  const [leaderMois, setLeaderMois] = useLocalStorageState("jadci_leader", {
+    nom: "À définir",
+    photo: "",
+    presentation: "Le jeune leader du mois sera présenté ici.",
+    mois: new Date().toISOString().slice(0, 7),
+  });
+
+  const [adminTab, setAdminTab] = useState("dashboard");
+  const [adminMessage, setAdminMessage] = useState("");
+  const [produitForm, setProduitForm] = useState({
+    id: null,
+    nom: "",
+    nature: "LIVRES",
+    categorie: "LIVRES",
+    prix: "",
+    description: "",
+    stock: 0,
+    appreciation: 5,
+    image: "",
+  });
+  const [articleForm, setArticleForm] = useState({
+    id: null,
+    titre: "",
+    contenu: "",
+    image: "",
+    datePublication: new Date().toISOString().slice(0, 10),
+    dateEvenement: "",
+    categorie: "ACTUALITÉ",
+  });
+  const [projetForm, setProjetForm] = useState({
+    id: null,
+    titre: "",
+    description: "",
+    objectif: "",
+    image: "",
+    actif: true,
+  });
+  const [leaderForm, setLeaderForm] = useState(leaderMois);
+
+  useEffect(() => {
+    if (annonces.length < 2) return undefined;
+
+    const timer = window.setInterval(() => {
+      setAnnonceActive((index) => (index + 1) % annonces.length);
+    }, 4500);
+
+    return () => window.clearInterval(timer);
+  }, [annonces.length]);
+
+  const navItems = [
+    ["accueil", "ACCUEIL"],
+    ["portail", "PORTAIL"],
+    ["utilisateurs", "UTILISATEURS"],
+    ["eglises", "ÉGLISES"],
+    ["medias", "DIRECT & PRÉDICATIONS"],
+    ["boutique", "BOUTIQUE"],
+    ["annonces", "ANNONCES"],
+  ];
+
+  const aller = (destination) => {
+    setPage(destination);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const connexionAdmin = () => {
+    if (motDePasse === "JADCI2026") {
+      setAdminConnecte(true);
+      setErreur("");
+      setMotDePasse("");
+    } else {
+      setErreur("Mot de passe administrateur incorrect.");
+    }
+  };
+
+  const traiterDemande = (id, nouveauStatut) => {
+    setDemandes((liste) =>
+      liste.map((demande) =>
+        demande.id === id
+          ? { ...demande, statut: nouveauStatut }
+          : demande
+      )
+    );
+  };
+
+  const publierAnnonce = () => {
+    const texte = annonce.trim();
+    if (!texte) return;
+
+    setAnnonces((liste) => [texte, ...liste]);
+    setAnnonce("");
+  };
+
+  const genererMatricule = (nom) => {
+    const premierNom = nom.trim().split(/\s+/).filter(Boolean)[0];
+    const initiale = premierNom
+      ? premierNom.substring(0, 3).toUpperCase()
+      : "JAD";
+    const nombre = Math.floor(10000 + Math.random() * 90000);
+
+    return `${initiale}${nombre}`;
+  };
+
+  const modifierInscription = (champ, valeur) => {
+    setInscription((ancienne) => ({
+      ...ancienne,
+      [champ]: valeur,
+    }));
+  };
+
+  const soumettreInscription = (event) => {
+    event.preventDefault();
+
+    if (
+      !inscription.nom.trim() ||
+      !inscription.telephone.trim() ||
+      !inscription.email.trim() ||
+      !inscription.ville.trim() ||
+      !inscription.motDePasse.trim()
+    ) {
+      setInscriptionMessage("Veuillez remplir les champs obligatoires.");
+      return;
+    }
+
+    const matricule = genererMatricule(inscription.nom);
+
+    const nouvelleDemande = {
+      id: Date.now(),
+      type: typeInscription,
+      nom: inscription.nom.trim(),
+      telephone: inscription.telephone.trim(),
+      ville: inscription.ville.trim(),
+      statut: "EN ATTENTE",
+      matricule,
+    };
+
+    setDemandes((liste) => [nouvelleDemande, ...liste]);
+
+    setInscriptionMessage(
+      `Votre demande a été enregistrée. Matricule provisoire : ${matricule}. La validation définitive sera effectuée par l'administration.`
+    );
+
+    setInscription(inscriptionInitiale);
+  };
+
+  const ajouterAuPanier = (produit) => {
+    if ((produit.stock ?? 0) <= 0) {
+      setCommandeMessage("Ce produit est en rupture de stock.");
+      return;
+    }
+
+    setProduits((liste) =>
+      liste.map((item) =>
+        item.id === produit.id ? { ...item, stock: Math.max(0, (item.stock ?? 0) - 1) } : item
+      )
+    );
+
+    setPanier((ancienPanier) => {
+      const existe = ancienPanier.find((item) => item.id === produit.id);
+
+      if (existe) {
+        return ancienPanier.map((item) =>
+          item.id === produit.id
+            ? { ...item, quantite: item.quantite + 1 }
+            : item
+        );
+      }
+
+      return [...ancienPanier, { ...produit, quantite: 1 }];
+    });
+
+    setCommandeMessage(`${produit.nom} a été ajouté à votre commande.`);
+  };
+
+  const modifierQuantite = (id, variation) => {
+    setPanier((ancienPanier) =>
+      ancienPanier
+        .map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                quantite: Math.max(0, item.quantite + variation),
+              }
+            : item
+        )
+        .filter((item) => item.quantite > 0)
+    );
+  };
+
+  const totalPanier = useMemo(
+    () =>
+      panier.reduce(
+        (total, item) => total + item.prix * item.quantite,
+        0
+      ),
+    [panier]
+  );
+
+  const confirmerCommande = () => {
+    if (panier.length === 0) {
+      setCommandeMessage("Votre commande est vide.");
+      return;
+    }
+
+    setCommandeMessage(
+      `Commande enregistrée pour un montant de ${totalPanier.toLocaleString(
+        "fr-FR"
+      )} FCFA. Le traitement de la commande sera effectué par l'administration.`
+    );
+
+    setPanier([]);
+  };
+
+  const ajouterEglise = (event) => {
+    event.preventDefault();
+
+    if (
+      !nouvelleEglise.nom.trim() ||
+      !nouvelleEglise.pasteur.trim() ||
+      !nouvelleEglise.ville.trim()
+    ) {
+      return;
+    }
+
+    setEglises((liste) => [
+      ...liste,
+      {
+        id: Date.now(),
+        ...nouvelleEglise,
+        nom: nouvelleEglise.nom.trim(),
+        pasteur: nouvelleEglise.pasteur.trim(),
+        ville: nouvelleEglise.ville.trim(),
+        statut: "EN ATTENTE",
+      },
+    ]);
+
+    setNouvelleEglise(nouvelleEgliseInitiale);
+  };
+
+
+  const modifierStatutEglise = (id, statut) => {
+    setEglises((liste) =>
+      liste.map((eglise) => (eglise.id === id ? { ...eglise, statut } : eglise))
+    );
+    setAdminMessage(`Église ${statut.toLowerCase()} avec succès.`);
+  };
+
+  const enregistrerProduit = (event) => {
+    event.preventDefault();
+    if (!produitForm.nom.trim() || !produitForm.prix) return;
+
+    const produit = {
+      id: produitForm.id || Date.now(),
+      nom: produitForm.nom.trim(),
+      nature: produitForm.nature,
+      categorie: produitForm.nature,
+      prix: Number(produitForm.prix),
+      description: produitForm.description.trim(),
+      stock: Math.max(0, Number(produitForm.stock) || 0),
+      appreciation: Math.min(5, Math.max(0, Number(produitForm.appreciation) || 0)),
+      image: produitForm.image.trim(),
+    };
+
+    setProduits((liste) =>
+      produitForm.id
+        ? liste.map((item) => (item.id === produitForm.id ? produit : item))
+        : [produit, ...liste]
+    );
+
+    setProduitForm({
+      id: null,
+      nom: "",
+      nature: "LIVRES",
+      categorie: "LIVRES",
+      prix: "",
+      description: "",
+      stock: 0,
+      appreciation: 5,
+      image: "",
+    });
+    setAdminMessage("Produit enregistré. Il est immédiatement visible dans la boutique.");
+  };
+
+  const supprimerProduit = (id) => {
+    setProduits((liste) => liste.filter((item) => item.id !== id));
+    setAdminMessage("Produit supprimé.");
+  };
+
+  const enregistrerArticle = (event) => {
+    event.preventDefault();
+    if (!articleForm.titre.trim() || !articleForm.contenu.trim()) return;
+
+    const article = {
+      ...articleForm,
+      id: articleForm.id || Date.now(),
+      titre: articleForm.titre.trim(),
+      contenu: articleForm.contenu.trim(),
+    };
+
+    setArticles((liste) =>
+      articleForm.id
+        ? liste.map((item) => (item.id === articleForm.id ? article : item))
+        : [article, ...liste]
+    );
+
+    setArticleForm({
+      id: null,
+      titre: "",
+      contenu: "",
+      image: "",
+      datePublication: new Date().toISOString().slice(0, 10),
+      dateEvenement: "",
+      categorie: "ACTUALITÉ",
+    });
+    setAdminMessage("Article publié.");
+  };
+
+  const supprimerArticle = (id) => {
+    setArticles((liste) => liste.filter((item) => item.id !== id));
+    setAdminMessage("Article supprimé.");
+  };
+
+  const enregistrerProjet = (event) => {
+    event.preventDefault();
+    if (!projetForm.titre.trim() || !projetForm.objectif) return;
+
+    const projet = {
+      ...projetForm,
+      id: projetForm.id || Date.now(),
+      titre: projetForm.titre.trim(),
+      description: projetForm.description.trim(),
+      objectif: Number(projetForm.objectif),
+      collecte: projetForm.id
+        ? Number(projets.find((p) => p.id === projetForm.id)?.collecte || 0)
+        : 0,
+    };
+
+    setProjets((liste) =>
+      projetForm.id
+        ? liste.map((item) => (item.id === projetForm.id ? projet : item))
+        : [projet, ...liste]
+    );
+
+    setProjetForm({
+      id: null,
+      titre: "",
+      description: "",
+      objectif: "",
+      image: "",
+      actif: true,
+    });
+    setAdminMessage("Projet enregistré.");
+  };
+
+  const soutenirProjet = (id, montant) => {
+    const valeur = Number(montant);
+    if (!Number.isFinite(valeur) || valeur <= 0) return;
+    setProjets((liste) =>
+      liste.map((p) => (p.id === id ? { ...p, collecte: Number(p.collecte || 0) + valeur } : p))
+    );
+  };
+
+  const enregistrerLeader = (event) => {
+    event.preventDefault();
+    setLeaderMois({
+      ...leaderForm,
+      nom: leaderForm.nom.trim(),
+      presentation: leaderForm.presentation.trim(),
+    });
+    setAdminMessage("Jeune leader du mois mis à jour.");
+  };
+
+  const eglisesFiltrees = eglises.filter((eglise) => !eglise.statut || eglise.statut === "VALIDÉE").filter((eglise) => {
+    const recherche = rechercheEglise.toLowerCase().trim();
+
+    if (!recherche) return true;
+
+    return (
+      eglise.nom.toLowerCase().includes(recherche) ||
+      eglise.ville.toLowerCase().includes(recherche) ||
+      eglise.commune.toLowerCase().includes(recherche) ||
+      eglise.quartier.toLowerCase().includes(recherche) ||
+      eglise.pasteur.toLowerCase().includes(recherche)
+    );
+  });
+
+  const styles = {
+    app: {
+      minHeight: "100vh",
+      background: "linear-gradient(180deg, #ffffff 0%, #f8f7ff 100%)",
+      color: "#111827",
+      fontFamily:
+        "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    },
+    header: {
+      background: "#ffffff",
+      borderBottom: "1px solid #e5e7eb",
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
+    },
+    headerInner: {
+      maxWidth: "1450px",
+      margin: "0 auto",
+      padding: "12px 28px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "25px",
+    },
+    brand: {
+      display: "flex",
+      alignItems: "center",
+      gap: "13px",
+      minWidth: 0,
+    },
+    brandLogo: {
+      width: "64px",
+      height: "64px",
+      objectFit: "contain",
+      flexShrink: 0,
+    },
+    brandTitle: {
+      margin: 0,
+      color: "#5420a8",
+      fontSize: "28px",
+      fontWeight: 900,
+    },
+    brandSubtitle: {
+      margin: "3px 0 0",
+      color: "#64748b",
+      fontSize: "13px",
+    },
+    nav: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: "5px",
+      flexWrap: "wrap",
+    },
+    navButton: (active) => ({
+      border: "none",
+      borderRadius: "10px",
+      padding: "12px 15px",
+      background: active ? "#2456d8" : "transparent",
+      color: active ? "#ffffff" : "#172033",
+      fontSize: "14px",
+      fontWeight: 850,
+      cursor: "pointer",
+      transition: "all .2s ease",
+    }),
+    announcement: {
+      background: "linear-gradient(90deg, #4e2096, #6428c7)",
+      color: "#ffffff",
+      display: "flex",
+      minHeight: "50px",
+    },
+    announcementTitle: {
+      background: "#2456d8",
+      padding: "0 30px",
+      display: "flex",
+      alignItems: "center",
+      fontWeight: 900,
+      fontSize: "15px",
+      whiteSpace: "nowrap",
+    },
+    announcementText: {
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "10px 20px",
+      fontSize: "15px",
+      fontWeight: 700,
+      textAlign: "center",
+    },
+    main: {
+      maxWidth: "1450px",
+      margin: "0 auto",
+      padding: "55px 32px 80px",
+    },
+    hero: {
+      position: "relative",
+      overflow: "hidden",
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1.05fr) minmax(380px, .95fr)",
+      alignItems: "center",
+      gap: "60px",
+      minHeight: "620px",
+      marginBottom: "80px",
+    },
+    badge: {
+      display: "inline-flex",
+      padding: "9px 16px",
+      borderRadius: "999px",
+      background: "#f1eaff",
+      border: "1px solid #dfd0ff",
+      color: "#5420a8",
+      fontWeight: 850,
+      fontSize: "14px",
+      marginBottom: "22px",
+    },
+    heroTitle: {
+      margin: 0,
+      color: "#111827",
+      fontSize: "clamp(44px, 5.5vw, 76px)",
+      lineHeight: 1,
+      letterSpacing: "-3px",
+      fontWeight: 950,
+    },
+    purple: { color: "#6428c7" },
+    heroText: {
+      maxWidth: "700px",
+      margin: "28px 0",
+      color: "#60728b",
+      fontSize: "19px",
+      lineHeight: 1.7,
+    },
+    heroActions: {
+      display: "flex",
+      gap: "12px",
+      flexWrap: "wrap",
+    },
+    button: {
+      border: "none",
+      borderRadius: "11px",
+      padding: "14px 20px",
+      background: "#2456d8",
+      color: "#ffffff",
+      fontWeight: 800,
+      fontSize: "15px",
+      cursor: "pointer",
+      boxShadow: "0 10px 24px rgba(37,86,216,.18)",
+    },
+    secondaryButton: {
+      border: "1px solid #d8c7ff",
+      borderRadius: "11px",
+      padding: "13px 20px",
+      background: "#ffffff",
+      color: "#5420a8",
+      fontWeight: 800,
+      fontSize: "15px",
+      cursor: "pointer",
+    },
+    heroCard: {
+      animation: "heroFloat 7s ease-in-out infinite",
+      minHeight: "530px",
+      borderRadius: "35px",
+      padding: "40px 30px",
+      background:
+        "linear-gradient(145deg, #5420a8 0%, #702bd0 50%, #2456d8 100%)",
+      color: "#ffffff",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      textAlign: "center",
+      position: "relative",
+      overflow: "hidden",
+      boxShadow: "0 30px 70px rgba(79,32,150,.22)",
+    },
+    heroLogoCircle: {
+      animation: "logoFloat 4.5s ease-in-out infinite",
+      width: "235px",
+      height: "235px",
+      borderRadius: "50%",
+      background: "#ffffff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "17px",
+      boxSizing: "border-box",
+      boxShadow: "0 20px 45px rgba(0,0,0,.18)",
+      marginBottom: "30px",
+    },
+    heroLogo: {
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+    },
+    heroCardText: {
+      maxWidth: "500px",
+      margin: 0,
+      fontSize: "27px",
+      lineHeight: 1.25,
+      fontWeight: 850,
+    },
+    heroMission: {
+      marginTop: "18px",
+      color: "#fde047",
+      fontSize: "19px",
+      fontWeight: 900,
+    },
+    mediaHero: {
+      position: "relative",
+      overflow: "hidden",
+      borderRadius: "30px",
+      padding: "55px 45px",
+      background: "linear-gradient(135deg, #17133b 0%, #5420a8 52%, #2456d8 100%)",
+      boxShadow: "0 30px 70px rgba(36,86,216,.18)",
+      minHeight: "300px",
+      display: "flex",
+      alignItems: "center",
+    },
+    mediaCover: {
+      minHeight: "170px",
+      borderRadius: "17px",
+      background: "linear-gradient(135deg, #17133b, #6428c7, #2456d8)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "15px",
+      padding: "22px",
+      color: "#fff",
+      position: "relative",
+      overflow: "hidden",
+    },
+    mediaCoverRing: {
+      width: "92px",
+      height: "92px",
+      borderRadius: "50%",
+      background: "rgba(255,255,255,.96)",
+      padding: "10px",
+      boxSizing: "border-box",
+      display: "grid",
+      placeItems: "center",
+      animation: "logoFloat 4s ease-in-out infinite",
+    },
+    homeMediaStrip: {
+      borderRadius: "26px",
+      padding: "35px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "25px",
+      flexWrap: "wrap",
+      background: "linear-gradient(120deg, #5420a8, #2456d8)",
+      boxShadow: "0 20px 50px rgba(79,32,150,.16)",
+    },
+    section: { marginBottom: "70px" },
+    sectionHeader: { maxWidth: "800px", marginBottom: "30px" },
+    sectionTitle: {
+      margin: 0,
+      color: "#172554",
+      fontSize: "clamp(28px, 4vw, 43px)",
+      fontWeight: 900,
+      letterSpacing: "-1px",
+    },
+    sectionText: {
+      color: "#64748b",
+      fontSize: "17px",
+      lineHeight: 1.7,
+      margin: "10px 0 0",
+    },
+    cards: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
+      gap: "18px",
+    },
+    card: {
+      background: "#ffffff",
+      border: "1px solid #e8e3f3",
+      borderRadius: "20px",
+      padding: "25px",
+      boxShadow: "0 12px 35px rgba(30,41,59,.055)",
+    },
+    cardTitle: {
+      margin: "0 0 9px",
+      color: "#172554",
+      fontSize: "19px",
+      fontWeight: 850,
+    },
+    cardText: {
+      margin: "0 0 18px",
+      color: "#64748b",
+      lineHeight: 1.6,
+    },
+    adminBox: {
+      background: "#ffffff",
+      borderRadius: "25px",
+      border: "1px solid #e3d8f8",
+      padding: "30px",
+      boxShadow: "0 20px 55px rgba(76,29,149,.07)",
+    },
+    input: {
+      width: "100%",
+      boxSizing: "border-box",
+      padding: "13px 15px",
+      border: "1px solid #d4d9e5",
+      borderRadius: "10px",
+      fontSize: "15px",
+      marginTop: "7px",
+      marginBottom: "15px",
+      outline: "none",
+      fontFamily: "inherit",
+      background: "#fff",
+    },
+    label: {
+      display: "block",
+      color: "#334155",
+      fontSize: "14px",
+      fontWeight: 750,
+      marginBottom: "3px",
+    },
+    tableWrapper: { overflowX: "auto" },
+    table: {
+      width: "100%",
+      minWidth: "750px",
+      borderCollapse: "collapse",
+      marginTop: "15px",
+    },
+    th: {
+      textAlign: "left",
+      padding: "13px",
+      background: "#f1efff",
+      color: "#312e81",
+      borderBottom: "1px solid #ddd6fe",
+      fontSize: "13px",
+    },
+    td: {
+      padding: "13px",
+      borderBottom: "1px solid #e8e8ef",
+      color: "#475569",
+      fontSize: "14px",
+    },
+    footer: {
+      background: "#151a35",
+      color: "#ffffff",
+      textAlign: "center",
+      padding: "50px 25px",
+    },
+    footerLogo: {
+      width: "75px",
+      height: "75px",
+      objectFit: "contain",
+      background: "#ffffff",
+      borderRadius: "50%",
+      padding: "5px",
+      marginBottom: "14px",
+    },
+  };
+
+  const renderAccueil = () => (
+    <>
+      <section style={styles.hero}>
+        <div>
+          <div style={styles.badge}>PLATEFORME OFFICIELLE JADCI</div>
+
+          <h1 className="reveal reveal-delay-1" style={styles.heroTitle}>
+            Ensemble pour
+            <br />
+            une <span className="gradient-text" style={styles.purple}>jeunesse engagée</span>
+          </h1>
+
+          <p className="reveal reveal-delay-2" style={styles.heroText}>
+            Bienvenue sur la plateforme numérique de la Jeunesse des
+            Assemblées de Dieu de Côte d’Ivoire. Un espace institutionnel
+            pour connecter, accompagner et servir la jeunesse.
+          </p>
+
+          <div className="reveal reveal-delay-3" style={styles.heroActions}>
+            <button style={styles.button} onClick={() => aller("portail")}>
+              ACCÉDER AU PORTAIL
+            </button>
+            <button
+              style={styles.secondaryButton}
+              onClick={() => aller("boutique")}
+            >
+              DÉCOUVRIR LA BOUTIQUE
+            </button>
+          </div>
+        </div>
+
+        <div style={styles.heroCard}>
+          <span className="hero-orbit hero-orbit-1" />
+          <span className="hero-orbit hero-orbit-2" />
+          <span className="hero-spark spark-1" />
+          <span className="hero-spark spark-2" />
+          <span className="hero-spark spark-3" />
+          <div style={styles.heroLogoCircle}>
+            <img src={logoJadci} alt="Logo JADCI" style={styles.heroLogo} />
+          </div>
+
+          <p style={styles.heroCardText}>
+            JEUNESSE DES ASSEMBLÉES
+            <br />
+            DE DIEU DE CÔTE D’IVOIRE
+          </p>
+
+          <div style={styles.heroMission}>FOI • SERVICE • MISSION</div>
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>
+            UNE PLATEFORME AU SERVICE DE LA JEUNESSE
+          </h2>
+          <p style={styles.sectionText}>
+            Retrouvez les principaux services de la JADCI dans un même
+            espace.
+          </p>
+        </div>
+
+        <div style={styles.cards}>
+          {[
+            [
+              "ESPACE JEUNE",
+              "Inscription, profil, matricule, CV, photo et carte jeune JADCI.",
+              "utilisateurs",
+            ],
+            [
+              "RESPONSABLES RÉGIONAUX",
+              "Gestion des églises, projets, propositions et informations régionales.",
+              "utilisateurs",
+            ],
+            [
+              "ÉGLISES",
+              "Consultez les églises enregistrées et recherchez une assemblée.",
+              "eglises",
+            ],
+            [
+              "BOUTIQUE JADCI",
+              "Livres, vêtements, gadgets et carte jeune.",
+              "boutique",
+            ],
+          ].map(([titre, texte, destination]) => (
+            <div className="interactive-card reveal-card" style={styles.card} key={titre}>
+              <h3 style={styles.cardTitle}>{titre}</h3>
+              <p style={styles.cardText}>{texte}</p>
+              <button
+                style={styles.button}
+                onClick={() => aller(destination)}
+              >
+                CONSULTER
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div className="home-media-strip">
+          <div>
+            <span className="live-badge">● NOUVEAU</span>
+            <h2 style={{ margin: "14px 0 8px", color: "#fff", fontSize: "clamp(28px, 4vw, 44px)" }}>
+              Suivez les directs et les prédications JADCI
+            </h2>
+            <p style={{ margin: 0, color: "rgba(255,255,255,.78)", lineHeight: 1.7, maxWidth: "720px" }}>
+              Une nouvelle rubrique média pour centraliser les cultes en direct, enseignements, événements et contenus vidéo.
+            </p>
+          </div>
+          <button type="button" style={styles.button} onClick={() => aller("medias")}>
+            OUVRIR L'ESPACE MÉDIA
+          </button>
+        </div>
+      </section>
+    </>
+  );
+
+  const renderPortail = () => {
+    if (!adminConnecte) {
+      return (
+        <section
+          style={{
+            ...styles.section,
+            maxWidth: "560px",
+            margin: "30px auto 70px",
+          }}
+        >
+          <div style={styles.adminBox}>
+            <div style={{ textAlign: "center", marginBottom: "25px" }}>
+              <img
+                src={logoJadci}
+                alt="Logo JADCI"
+                style={{
+                  width: "105px",
+                  height: "105px",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+
+            <h2 style={styles.sectionTitle}>PORTAIL ADMINISTRATEUR</h2>
+            <p style={styles.sectionText}>
+              Cet espace est réservé à l'administration générale de la JADCI.
+            </p>
+
+            <label style={styles.label}>MOT DE PASSE ADMINISTRATEUR</label>
+            <input
+              type="password"
+              value={motDePasse}
+              onChange={(event) => {
+                setMotDePasse(event.target.value);
+                if (erreur) setErreur("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") connexionAdmin();
+              }}
+              placeholder="Entrez votre mot de passe"
+              style={styles.input}
+              autoComplete="current-password"
+            />
+
+            {erreur && (
+              <p style={{ color: "#b91c1c", fontWeight: 700 }}>{erreur}</p>
+            )}
+
+            <button
+              style={{ ...styles.button, width: "100%" }}
+              onClick={connexionAdmin}
+            >
+              SE CONNECTER
+            </button>
+
+            <p
+              style={{
+                marginTop: "18px",
+                color: "#64748b",
+                fontSize: "13px",
+                textAlign: "center",
+              }}
+            >
+              Mot de passe de démonstration : <strong>JADCI2026</strong>
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    const demandesEnAttente = demandes.filter(
+      (demande) => demande.statut === "EN ATTENTE"
+    ).length;
+
+    return (
+      <>
+        <section style={styles.section}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "20px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: "24px",
+            }}
+          >
+            <div>
+              <h2 style={styles.sectionTitle}>
+                TABLEAU DE BORD ADMINISTRATEUR
+              </h2>
+              <p style={styles.sectionText}>
+                Centre de gestion JADCI : demandes, églises, boutique,
+                contenus, projets, calendrier et médias.
+              </p>
+            </div>
+
+            <button
+              style={styles.secondaryButton}
+              onClick={() => {
+                setAdminConnecte(false);
+                setAdminTab("dashboard");
+                setErreur("");
+                setMotDePasse("");
+              }}
+            >
+              DÉCONNEXION
+            </button>
+          </div>
+
+          <div style={styles.cards}>
+            {[
+              ["DEMANDES EN ATTENTE", demandesEnAttente],
+              [
+                "ÉGLISES EN ATTENTE",
+                eglises.filter((e) => e.statut === "EN ATTENTE").length,
+              ],
+              ["PRODUITS BOUTIQUE", produits.length],
+              ["ARTICLES / ANNONCES", articles.length],
+              ["PROJETS", projets.length],
+              [
+                "STOCK TOTAL",
+                produits.reduce((t, p) => t + Number(p.stock || 0), 0),
+              ],
+            ].map(([titre, nombre]) => (
+              <div style={styles.card} key={titre}>
+                <h3 style={styles.cardTitle}>{titre}</h3>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: "38px",
+                    color: "#2456d8",
+                  }}
+                >
+                  {nombre}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.adminBox}>
+            <h3 style={{ ...styles.cardTitle, fontSize: "25px" }}>
+              GESTION RAPIDE DES DEMANDES
+            </h3>
+
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    {[
+                      "TYPE",
+                      "NOM",
+                      "TÉLÉPHONE",
+                      "VILLE",
+                      "MATRICULE",
+                      "STATUT",
+                      "ACTION",
+                    ].map((h) => (
+                      <th style={styles.th} key={h}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {demandes.map((demande) => (
+                    <tr key={demande.id}>
+                      <td style={styles.td}>{demande.type}</td>
+                      <td style={styles.td}>{demande.nom}</td>
+                      <td style={styles.td}>{demande.telephone}</td>
+                      <td style={styles.td}>{demande.ville}</td>
+                      <td style={styles.td}>
+                        {demande.matricule || "—"}
+                      </td>
+                      <td style={styles.td}>
+                        <strong>{demande.statut}</strong>
+                      </td>
+                      <td style={styles.td}>
+                        {demande.statut === "EN ATTENTE" ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <button
+                              style={styles.button}
+                              onClick={() =>
+                                traiterDemande(demande.id, "VALIDÉE")
+                              }
+                            >
+                              VALIDER
+                            </button>
+
+                            <button
+                              style={{
+                                ...styles.secondaryButton,
+                                color: "#b91c1c",
+                                borderColor: "#fecaca",
+                              }}
+                              onClick={() =>
+                                traiterDemande(demande.id, "REFUSÉE")
+                              }
+                            >
+                              REFUSER
+                            </button>
+                          </div>
+                        ) : (
+                          "TRAITÉE"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {renderAdminGestion()}
+      </>
+    );
+  };
+
+  const renderAdminGestion = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.adminBox}>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "22px" }}>
+            {[
+              ["dashboard", "VUE D'ENSEMBLE"],
+              ["eglises", "ÉGLISES"],
+              ["produits", "BOUTIQUE"],
+              ["editorial", "ANNONCES & ARTICLES"],
+              ["projets", "PROJETS"],
+              ["leader", "LEADER DU MOIS"],
+              ["calendrier", "CALENDRIER"],
+              ["direct", "DIRECTS & MÉDIAS"],
+            ].map(([tab, label]) => (
+              <button
+                key={tab}
+                type="button"
+                style={adminTab === tab ? styles.button : styles.secondaryButton}
+                onClick={() => setAdminTab(tab)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {adminMessage && (
+            <div className="admin-success" style={{ marginBottom: "20px" }}>
+              {adminMessage}
+            </div>
+          )}
+
+          {adminTab === "eglises" && (
+            <div>
+              <h3 style={styles.cardTitle}>MODÉRATION DES ÉGLISES</h3>
+              <p style={styles.sectionText}>
+                Les nouvelles églises arrivent en « EN ATTENTE ». Elles ne sont publiées au public qu'après validation.
+              </p>
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      {["ÉGLISE", "PASTEUR", "VILLE", "STATUT", "ACTIONS"].map((h) => (
+                        <th style={styles.th} key={h}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {eglises.map((eglise) => (
+                      <tr key={eglise.id}>
+                        <td style={styles.td}>{eglise.nom}</td>
+                        <td style={styles.td}>{eglise.pasteur}</td>
+                        <td style={styles.td}>{eglise.ville}</td>
+                        <td style={styles.td}><strong>{eglise.statut || "EN ATTENTE"}</strong></td>
+                        <td style={styles.td}>
+                          <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
+                            <button type="button" style={styles.button} onClick={() => modifierStatutEglise(eglise.id, "VALIDÉE")}>VALIDER</button>
+                            <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => modifierStatutEglise(eglise.id, "REFUSÉE")}>REJETER</button>
+                            <button type="button" style={styles.secondaryButton} onClick={() => modifierStatutEglise(eglise.id, "EN ATTENTE")}>REMETTRE EN ATTENTE</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {adminTab === "produits" && (
+            <div>
+              <h3 style={styles.cardTitle}>GESTION DE LA BOUTIQUE</h3>
+              <form onSubmit={enregistrerProduit}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                  <div><label style={styles.label}>NOM *</label><input style={styles.input} value={produitForm.nom} onChange={(e) => setProduitForm((p) => ({ ...p, nom: e.target.value }))} /></div>
+                  <div>
+                    <label style={styles.label}>NATURE *</label>
+                    <select style={styles.input} value={produitForm.nature} onChange={(e) => setProduitForm((p) => ({ ...p, nature: e.target.value }))}>
+                      <option>LIVRES</option><option>VÊTEMENTS</option><option>GADGETS</option><option>SERVICES</option><option>AUTRE</option>
+                    </select>
+                  </div>
+                  <div><label style={styles.label}>PRIX (FCFA) *</label><input type="number" min="0" style={styles.input} value={produitForm.prix} onChange={(e) => setProduitForm((p) => ({ ...p, prix: e.target.value }))} /></div>
+                  <div><label style={styles.label}>STOCK</label><input type="number" min="0" style={styles.input} value={produitForm.stock} onChange={(e) => setProduitForm((p) => ({ ...p, stock: e.target.value }))} /></div>
+                  <div><label style={styles.label}>APPRÉCIATION / 5</label><input type="number" min="0" max="5" step="0.1" style={styles.input} value={produitForm.appreciation} onChange={(e) => setProduitForm((p) => ({ ...p, appreciation: e.target.value }))} /></div>
+                  <div><label style={styles.label}>IMAGE (URL)</label><input style={styles.input} value={produitForm.image} onChange={(e) => setProduitForm((p) => ({ ...p, image: e.target.value }))} placeholder="https://..." /></div>
+                </div>
+                <label style={styles.label}>DESCRIPTION</label>
+                <textarea style={{ ...styles.input, minHeight: "100px", resize: "vertical" }} value={produitForm.description} onChange={(e) => setProduitForm((p) => ({ ...p, description: e.target.value }))} />
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button type="submit" style={styles.button}>{produitForm.id ? "MODIFIER LE PRODUIT" : "ENREGISTRER LE PRODUIT"}</button>
+                  {produitForm.id && <button type="button" style={styles.secondaryButton} onClick={() => setProduitForm({ id: null, nom: "", nature: "LIVRES", categorie: "LIVRES", prix: "", description: "", stock: 0, appreciation: 5, image: "" })}>ANNULER</button>}
+                </div>
+              </form>
+
+              <div style={{ marginTop: "28px" }}>
+                <div style={styles.tableWrapper}>
+                  <table style={styles.table}>
+                    <thead><tr>{["PRODUIT", "NATURE", "PRIX", "STOCK", "NOTE", "ACTIONS"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
+                    <tbody>
+                      {produits.map((p) => (
+                        <tr key={p.id}>
+                          <td style={styles.td}>{p.nom}</td>
+                          <td style={styles.td}>{p.nature || p.categorie}</td>
+                          <td style={styles.td}>{Number(p.prix).toLocaleString("fr-FR")} FCFA</td>
+                          <td style={styles.td}>{p.stock ?? 0}</td>
+                          <td style={styles.td}>{"★".repeat(Math.round(p.appreciation || 0))}</td>
+                          <td style={styles.td}>
+                            <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
+                              <button type="button" style={styles.secondaryButton} onClick={() => setProduitForm({ ...p, nature: p.nature || p.categorie, prix: p.prix, stock: p.stock ?? 0, appreciation: p.appreciation ?? 5, image: p.image || "" })}>MODIFIER</button>
+                              <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerProduit(p.id)}>SUPPRIMER</button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {adminTab === "editorial" && (
+            <div>
+              <h3 style={styles.cardTitle}>RÉDACTION — ANNONCES & ARTICLES</h3>
+              <form onSubmit={enregistrerArticle}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                  <div><label style={styles.label}>TITRE *</label><input style={styles.input} value={articleForm.titre} onChange={(e) => setArticleForm((a) => ({ ...a, titre: e.target.value }))} /></div>
+                  <div><label style={styles.label}>CATÉGORIE</label><input style={styles.input} value={articleForm.categorie} onChange={(e) => setArticleForm((a) => ({ ...a, categorie: e.target.value }))} /></div>
+                  <div><label style={styles.label}>IMAGE (URL)</label><input style={styles.input} value={articleForm.image} onChange={(e) => setArticleForm((a) => ({ ...a, image: e.target.value }))} placeholder="https://..." /></div>
+                  <div><label style={styles.label}>DATE DE PUBLICATION</label><input type="date" style={styles.input} value={articleForm.datePublication} onChange={(e) => setArticleForm((a) => ({ ...a, datePublication: e.target.value }))} /></div>
+                  <div><label style={styles.label}>DATE DU PROGRAMME</label><input type="date" style={styles.input} value={articleForm.dateEvenement} onChange={(e) => setArticleForm((a) => ({ ...a, dateEvenement: e.target.value }))} /></div>
+                </div>
+                <label style={styles.label}>ARTICLE *</label>
+                <textarea style={{ ...styles.input, minHeight: "180px", resize: "vertical" }} value={articleForm.contenu} onChange={(e) => setArticleForm((a) => ({ ...a, contenu: e.target.value }))} />
+                <button type="submit" style={styles.button}>{articleForm.id ? "MODIFIER L'ARTICLE" : "PUBLIER L'ARTICLE"}</button>
+              </form>
+
+              <div style={{ marginTop: "25px" }}>
+                {articles.map((article) => (
+                  <article className="interactive-card" key={article.id} style={{ ...styles.card, marginBottom: "12px" }}>
+                    {article.image && <img src={article.image} alt="" style={{ width: "100%", maxHeight: "220px", objectFit: "cover", borderRadius: "14px", marginBottom: "14px" }} />}
+                    <div style={{ color: "#64748b", fontSize: "13px", fontWeight: 800 }}>{article.categorie} • {article.datePublication}{article.dateEvenement ? ` • Programme : ${article.dateEvenement}` : ""}</div>
+                    <h4 style={{ ...styles.cardTitle, marginTop: "8px" }}>{article.titre}</h4>
+                    <p style={styles.cardText}>{article.contenu}</p>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      <button type="button" style={styles.secondaryButton} onClick={() => setArticleForm(article)}>MODIFIER</button>
+                      <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerArticle(article.id)}>SUPPRIMER</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {adminTab === "projets" && (
+            <div>
+              <h3 style={styles.cardTitle}>PROJETS — SOUTIEN LIBRE</h3>
+              <form onSubmit={enregistrerProjet}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                  <div><label style={styles.label}>NOM DU PROJET *</label><input style={styles.input} value={projetForm.titre} onChange={(e) => setProjetForm((p) => ({ ...p, titre: e.target.value }))} /></div>
+                  <div><label style={styles.label}>OBJECTIF (FCFA) *</label><input type="number" min="0" style={styles.input} value={projetForm.objectif} onChange={(e) => setProjetForm((p) => ({ ...p, objectif: e.target.value }))} /></div>
+                  <div><label style={styles.label}>IMAGE (URL)</label><input style={styles.input} value={projetForm.image} onChange={(e) => setProjetForm((p) => ({ ...p, image: e.target.value }))} /></div>
+                </div>
+                <label style={styles.label}>DESCRIPTION</label>
+                <textarea style={{ ...styles.input, minHeight: "120px", resize: "vertical" }} value={projetForm.description} onChange={(e) => setProjetForm((p) => ({ ...p, description: e.target.value }))} />
+                <label style={{ ...styles.label, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input type="checkbox" checked={projetForm.actif} onChange={(e) => setProjetForm((p) => ({ ...p, actif: e.target.checked }))} />
+                  Projet visible sur le site
+                </label>
+                <button type="submit" style={styles.button}>{projetForm.id ? "MODIFIER LE PROJET" : "CRÉER LE PROJET"}</button>
+              </form>
+
+              <div style={{ marginTop: "25px" }}>
+                {projets.map((p) => {
+                  const objectif = Number(p.objectif) || 0;
+                  const collecte = Number(p.collecte) || 0;
+                  const pct = objectif ? Math.min(100, Math.round((collecte / objectif) * 100)) : 0;
+                  return (
+                    <div key={p.id} className="interactive-card" style={{ ...styles.card, marginBottom: "12px" }}>
+                      {p.image && <img src={p.image} alt="" style={{ width: "100%", maxHeight: "200px", objectFit: "cover", borderRadius: "14px" }} />}
+                      <h4 style={styles.cardTitle}>{p.titre}</h4>
+                      <p style={styles.cardText}>{p.description}</p>
+                      <strong>{collecte.toLocaleString("fr-FR")} / {objectif.toLocaleString("fr-FR")} FCFA ({pct}%)</strong>
+                      <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                        <button type="button" style={styles.secondaryButton} onClick={() => setProjetForm({ ...p, objectif: p.objectif, image: p.image || "" })}>MODIFIER</button>
+                        <button type="button" style={styles.button} onClick={() => soutenirProjet(p.id, 1000)}>+ 1 000 FCFA (TEST)</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {adminTab === "leader" && (
+            <div>
+              <h3 style={styles.cardTitle}>JEUNE LEADER DU MOIS</h3>
+              <form onSubmit={enregistrerLeader}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                  <div><label style={styles.label}>NOM COMPLET</label><input style={styles.input} value={leaderForm.nom} onChange={(e) => setLeaderForm((l) => ({ ...l, nom: e.target.value }))} /></div>
+                  <div><label style={styles.label}>MOIS</label><input type="month" style={styles.input} value={leaderForm.mois} onChange={(e) => setLeaderForm((l) => ({ ...l, mois: e.target.value }))} /></div>
+                  <div><label style={styles.label}>PHOTO (URL)</label><input style={styles.input} value={leaderForm.photo || ""} onChange={(e) => setLeaderForm((l) => ({ ...l, photo: e.target.value }))} /></div>
+                </div>
+                <label style={styles.label}>PRÉSENTATION COMPLÈTE</label>
+                <textarea style={{ ...styles.input, minHeight: "180px", resize: "vertical" }} value={leaderForm.presentation} onChange={(e) => setLeaderForm((l) => ({ ...l, presentation: e.target.value }))} />
+                <button type="submit" style={styles.button}>ENREGISTRER LE LEADER</button>
+              </form>
+            </div>
+          )}
+
+          {adminTab === "calendrier" && (
+            <div>
+              <h3 style={styles.cardTitle}>CALENDRIER DES PROGRAMMES</h3>
+              <p style={styles.sectionText}>
+                Les dates saisies dans les articles et annonces apparaissent
+                automatiquement ici, triées par date.
+              </p>
+
+              <div style={styles.cards}>
+                {articles
+                  .filter((a) => a.dateEvenement)
+                  .sort((a, b) =>
+                    a.dateEvenement.localeCompare(b.dateEvenement)
+                  )
+                  .map((a) => (
+                    <div style={styles.card} key={`cal-${a.id}`}>
+                      <div
+                        style={{
+                          color: "#2456d8",
+                          fontWeight: 900,
+                          fontSize: "18px",
+                        }}
+                      >
+                        {a.dateEvenement}
+                      </div>
+                      <h4
+                        style={{
+                          ...styles.cardTitle,
+                          marginTop: "8px",
+                        }}
+                      >
+                        {a.titre}
+                      </h4>
+                      <p style={styles.cardText}>{a.categorie}</p>
+                    </div>
+                  ))}
+              </div>
+
+              {articles.filter((a) => a.dateEvenement).length === 0 && (
+                <p style={styles.sectionText}>
+                  Aucun programme planifié pour le moment. Créez un article
+                  avec une date de programme.
+                </p>
+              )}
+            </div>
+          )}
+
+          {adminTab === "direct" && (
+            <div>
+              <h3 style={styles.cardTitle}>
+                DIRECTS, PRÉDICATIONS & MÉDIAS
+              </h3>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "10px 18px",
+                }}
+              >
+                <div>
+                  <label style={styles.label}>TITRE DU DIRECT</label>
+                  <input
+                    style={styles.input}
+                    value={direct.titre}
+                    onChange={(e) =>
+                      setDirect((d) => ({
+                        ...d,
+                        titre: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>SOUS-TITRE</label>
+                  <input
+                    style={styles.input}
+                    value={direct.sousTitre}
+                    onChange={(e) =>
+                      setDirect((d) => ({
+                        ...d,
+                        sousTitre: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>
+                    LIEN VIDÉO / DIRECT
+                  </label>
+                  <input
+                    style={styles.input}
+                    value={direct.url}
+                    onChange={(e) =>
+                      setDirect((d) => ({
+                        ...d,
+                        url: e.target.value,
+                      }))
+                    }
+                    placeholder="https://youtube.com/..."
+                  />
+                </div>
+              </div>
+
+              <label
+                style={{
+                  ...styles.label,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  marginTop: "8px",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={direct.actif}
+                  onChange={(e) =>
+                    setDirect((d) => ({
+                      ...d,
+                      actif: e.target.checked,
+                    }))
+                  }
+                />
+                Afficher le direct comme ACTIF sur le site
+              </label>
+
+              <p
+                style={{
+                  ...styles.sectionText,
+                  marginTop: "20px",
+                }}
+              >
+                Les prédications et médias existants sont visibles dans
+                « DIRECT & PRÉDICATIONS ». Les nouveaux contenus peuvent
+                être ajoutés depuis « ANNONCES & ARTICLES » avec image,
+                description et date.
+              </p>
+
+              <div style={styles.cards}>
+                {medias.map((m) => (
+                  <div style={styles.card} key={m.id}>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 900,
+                        color: "#5420a8",
+                      }}
+                    >
+                      {m.type}
+                    </div>
+                    <h4
+                      style={{
+                        ...styles.cardTitle,
+                        marginTop: "7px",
+                      }}
+                    >
+                      {m.titre}
+                    </h4>
+                    <p style={styles.cardText}>{m.description}</p>
+                    <button
+                      style={styles.secondaryButton}
+                      onClick={() =>
+                        window.open(
+                          m.url,
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }
+                    >
+                      OUVRIR LE MÉDIA
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {adminTab === "dashboard" && (
+            <div style={styles.cards}>
+              <div style={styles.card}><h3 style={styles.cardTitle}>ÉGLISES EN ATTENTE</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{eglises.filter((e) => e.statut === "EN ATTENTE").length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>PRODUITS</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{produits.length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>ARTICLES</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{articles.length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>PROJETS</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{projets.length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>LEADER DU MOIS</h3><strong style={{ fontSize: "20px", color: "#5420a8" }}>{leaderMois.nom}</strong></div>
+            </div>
+          )}
+        </div>
+      </section>
+    </>
+  );
+
+  const renderUtilisateurs = () => (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>UTILISATEURS</h2>
+        <p style={styles.sectionText}>
+          Choisissez le type d'espace à créer.
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "25px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          style={
+            typeInscription === "JEUNE"
+              ? styles.button
+              : styles.secondaryButton
+          }
+          onClick={() => {
+            setTypeInscription("JEUNE");
+            setInscriptionMessage("");
+          }}
+        >
+          ESPACE JEUNE
+        </button>
+
+        <button
+          style={
+            typeInscription === "RESPONSABLE RÉGIONAL"
+              ? styles.button
+              : styles.secondaryButton
+          }
+          onClick={() => {
+            setTypeInscription("RESPONSABLE RÉGIONAL");
+            setInscriptionMessage("");
+          }}
+        >
+          RESPONSABLE RÉGIONAL
+        </button>
+      </div>
+
+      <div style={styles.adminBox}>
+        <h3 style={styles.cardTitle}>
+          INSCRIPTION — {typeInscription}
+        </h3>
+
+        <form onSubmit={soumettreInscription}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(230px, 1fr))",
+              gap: "10px 18px",
+            }}
+          >
+            <div>
+              <label style={styles.label}>NOM ET PRÉNOMS *</label>
+              <input
+                style={styles.input}
+                value={inscription.nom}
+                onChange={(event) =>
+                  modifierInscription("nom", event.target.value)
+                }
+                placeholder="Nom et prénoms"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>TÉLÉPHONE *</label>
+              <input
+                style={styles.input}
+                value={inscription.telephone}
+                onChange={(event) =>
+                  modifierInscription("telephone", event.target.value)
+                }
+                placeholder="07 00 00 00 00"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>E-MAIL *</label>
+              <input
+                type="email"
+                style={styles.input}
+                value={inscription.email}
+                onChange={(event) =>
+                  modifierInscription("email", event.target.value)
+                }
+                placeholder="adresse@email.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>MOT DE PASSE *</label>
+              <input
+                type="password"
+                style={styles.input}
+                value={inscription.motDePasse}
+                onChange={(event) =>
+                  modifierInscription("motDePasse", event.target.value)
+                }
+                placeholder="Mot de passe"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>VILLE *</label>
+              <input
+                style={styles.input}
+                value={inscription.ville}
+                onChange={(event) =>
+                  modifierInscription("ville", event.target.value)
+                }
+                placeholder="Ville"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>COMMUNE</label>
+              <input
+                style={styles.input}
+                value={inscription.commune}
+                onChange={(event) =>
+                  modifierInscription("commune", event.target.value)
+                }
+                placeholder="Commune"
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>QUARTIER</label>
+              <input
+                style={styles.input}
+                value={inscription.quartier}
+                onChange={(event) =>
+                  modifierInscription("quartier", event.target.value)
+                }
+                placeholder="Quartier"
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>SEXE</label>
+              <select
+                style={styles.input}
+                value={inscription.sexe}
+                onChange={(event) =>
+                  modifierInscription("sexe", event.target.value)
+                }
+              >
+                <option value="">Sélectionner</option>
+                <option value="HOMME">HOMME</option>
+                <option value="FEMME">FEMME</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={styles.label}>STATUT SOCIAL</label>
+              <input
+                style={styles.input}
+                value={inscription.statutSocial}
+                onChange={(event) =>
+                  modifierInscription("statutSocial", event.target.value)
+                }
+                placeholder="Étudiant, salarié..."
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>STATUT MATRIMONIAL</label>
+              <select
+                style={styles.input}
+                value={inscription.statutMatrimonial}
+                onChange={(event) =>
+                  modifierInscription(
+                    "statutMatrimonial",
+                    event.target.value
+                  )
+                }
+              >
+                <option value="">Sélectionner</option>
+                <option value="CÉLIBATAIRE">CÉLIBATAIRE</option>
+                <option value="MARIÉ(E)">MARIÉ(E)</option>
+              </select>
+            </div>
+
+            {typeInscription === "JEUNE" ? (
+              <>
+                <div>
+                  <label style={styles.label}>ÉGLISE LOCALE</label>
+                  <input
+                    style={styles.input}
+                    value={inscription.eglise}
+                    onChange={(event) =>
+                      modifierInscription("eglise", event.target.value)
+                    }
+                    placeholder="AD Temple de la Gloire"
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>COMITÉ / DÉPARTEMENT</label>
+                  <input
+                    style={styles.input}
+                    value={inscription.departement}
+                    onChange={(event) =>
+                      modifierInscription(
+                        "departement",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Musique, prière..."
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>CV</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    style={styles.input}
+                    onChange={(event) =>
+                      modifierInscription(
+                        "cv",
+                        event.target.files?.[0] || null
+                      )
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>PHOTO DE PROFIL</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={styles.input}
+                    onChange={(event) =>
+                      modifierInscription(
+                        "photo",
+                        event.target.files?.[0] || null
+                      )
+                    }
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label style={styles.label}>RESPONSABILITÉ</label>
+                <input
+                  style={styles.input}
+                  value={inscription.responsabilite}
+                  onChange={(event) =>
+                    modifierInscription(
+                      "responsabilite",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Responsabilité régionale"
+                />
+              </div>
+            )}
+          </div>
+
+          {inscriptionMessage && (
+            <div
+              style={{
+                margin: "10px 0 20px",
+                padding: "14px",
+                borderRadius: "10px",
+                background: "#f1f5f9",
+                color: "#334155",
+                fontWeight: 700,
+              }}
+            >
+              {inscriptionMessage}
+            </div>
+          )}
+
+          <button type="submit" style={styles.button}>
+            SOUMETTRE L'INSCRIPTION
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+
+  const renderEglises = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>LISTE DES ÉGLISES</h2>
+          <p style={styles.sectionText}>
+            Retrouvez les assemblées enregistrées sur la plateforme JADCI.
+          </p>
+        </div>
+
+        <input
+          style={{ ...styles.input, maxWidth: "650px" }}
+          value={rechercheEglise}
+          onChange={(event) => setRechercheEglise(event.target.value)}
+          placeholder="Rechercher une église, une ville, une commune ou un quartier..."
+        />
+
+        {eglisesFiltrees.length === 0 ? (
+          <div style={styles.card}>
+            <p style={styles.cardText}>Aucune église ne correspond à votre recherche.</p>
+          </div>
+        ) : (
+          <div style={styles.cards}>
+            {eglisesFiltrees.map((eglise) => (
+              <div style={styles.card} key={eglise.id}>
+                <h3 style={styles.cardTitle}>{eglise.nom}</h3>
+
+                <p style={styles.cardText}>
+                  <strong>Pasteur :</strong> {eglise.pasteur}
+                  <br />
+                  <strong>Ville :</strong> {eglise.ville}
+                  <br />
+                  <strong>Commune :</strong> {eglise.commune || "—"}
+                  <br />
+                  <strong>Quartier :</strong> {eglise.quartier || "—"}
+                </p>
+
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => {
+                    const url =
+                      eglise.localisation ||
+                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        `${eglise.nom} ${eglise.ville} ${eglise.commune || ""}`
+                      )}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  VOIR SUR GOOGLE MAPS
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.adminBox}>
+          <h3 style={styles.cardTitle}>SOUMETTRE UNE ÉGLISE</h3>
+
+          <form onSubmit={ajouterEglise}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(230px, 1fr))",
+                gap: "10px 18px",
+              }}
+            >
+              {[
+                ["nom", "NOM DE L'ÉGLISE"],
+                ["pasteur", "NOM DU PASTEUR"],
+                ["ville", "VILLE"],
+                ["commune", "COMMUNE"],
+                ["quartier", "QUARTIER"],
+                ["localisation", "LIEN GOOGLE MAPS"],
+              ].map(([champ, label]) => (
+                <div key={champ}>
+                  <label style={styles.label}>{label}</label>
+                  <input
+                    style={styles.input}
+                    value={nouvelleEglise[champ]}
+                    onChange={(event) =>
+                      setNouvelleEglise((ancienne) => ({
+                        ...ancienne,
+                        [champ]: event.target.value,
+                      }))
+                    }
+                    placeholder={label}
+                    required={["nom", "pasteur", "ville"].includes(champ)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button type="submit" style={styles.button}>
+              SOUMETTRE L'ÉGLISE
+            </button>
+          </form>
+        </div>
+      </section>
+    </>
+  );
+
+  const renderBoutique = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>BOUTIQUE JADCI</h2>
+          <p style={styles.sectionText}>
+            Commandez les produits disponibles et préparez votre livraison.
+          </p>
+        </div>
+
+        <div style={styles.cards}>
+          {produits.map((produit) => (
+            <div style={styles.card} key={produit.id}>
+              <div
+                style={{
+                  height: "130px",
+                  borderRadius: "15px",
+                  background:
+                    "linear-gradient(135deg, #f1eaff, #e7edff)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#5420a8",
+                  fontWeight: 900,
+                  marginBottom: "18px",
+                }}
+              >
+                {produit.categorie}
+              </div>
+
+              <h3 style={styles.cardTitle}>{produit.nom}</h3>
+              <p style={styles.cardText}>{produit.description}</p>
+
+              <div style={{ color: "#f59e0b", fontWeight: 900, marginBottom: "8px" }}>{"★".repeat(Math.round(produit.appreciation || 0))} <span style={{ color: "#64748b", fontWeight: 700 }}>({produit.stock ?? 0} en stock)</span></div>
+              <strong
+                style={{
+                  display: "block",
+                  color: "#2456d8",
+                  fontSize: "20px",
+                  marginBottom: "15px",
+                }}
+              >
+                {produit.prix.toLocaleString("fr-FR")} FCFA
+              </strong>
+
+              <button
+                type="button"
+                disabled={(produit.stock ?? 0) === 0}
+                style={{ ...styles.button, opacity: (produit.stock ?? 0) === 0 ? 0.5 : 1, cursor: (produit.stock ?? 0) === 0 ? "not-allowed" : "pointer" }}
+                onClick={() => ajouterAuPanier(produit)}
+              >
+                {(produit.stock ?? 0) === 0 ? "RUPTURE DE STOCK" : "AJOUTER À LA COMMANDE"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.adminBox}>
+          <h3 style={styles.cardTitle}>MA COMMANDE</h3>
+
+          {panier.length === 0 ? (
+            <p style={styles.sectionText}>
+              Aucun produit dans la commande.
+            </p>
+          ) : (
+            <>
+              {panier.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "15px",
+                    padding: "14px 0",
+                    borderBottom: "1px solid #e5e7eb",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <strong>{item.nom}</strong>
+                    <div style={{ color: "#64748b", marginTop: "4px" }}>
+                      {item.prix.toLocaleString("fr-FR")} FCFA
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      style={styles.secondaryButton}
+                      onClick={() => modifierQuantite(item.id, -1)}
+                    >
+                      -
+                    </button>
+
+                    <strong>{item.quantite}</strong>
+
+                    <button
+                      type="button"
+                      style={styles.secondaryButton}
+                      onClick={() => modifierQuantite(item.id, 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "15px",
+                  marginTop: "20px",
+                  fontSize: "20px",
+                  fontWeight: 900,
+                }}
+              >
+                <span>TOTAL</span>
+                <span>{totalPanier.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+
+              <button
+                type="button"
+                style={{ ...styles.button, marginTop: "20px" }}
+                onClick={confirmerCommande}
+              >
+                CONFIRMER LA COMMANDE
+              </button>
+            </>
+          )}
+
+          {commandeMessage && (
+            <p
+              style={{
+                marginTop: "18px",
+                color: "#334155",
+                fontWeight: 700,
+              }}
+            >
+              {commandeMessage}
+            </p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+
+  const renderMedias = () => {
+    const mediasFiltres =
+      mediaFiltre === "TOUT"
+        ? medias
+        : medias.filter((media) => media.type === mediaFiltre);
+
+    return (
+      <>
+        <section style={styles.section}>
+          <div style={styles.sectionHeader}>
+            <span className="live-badge">● ESPACE MÉDIA JADCI</span>
+            <h2 style={styles.sectionTitle}>DIRECTS, PRÉDICATIONS & MÉDIAS</h2>
+            <p style={styles.sectionText}>
+              Un espace moderne pour regarder les directs, retrouver les prédications et suivre les grands rendez-vous de la JADCI.
+            </p>
+          </div>
+
+          <div style={styles.mediaHero}>
+            <div className="media-glow media-glow-1" />
+            <div className="media-glow media-glow-2" />
+            <div style={{ position: "relative", zIndex: 2 }}>
+              <span className={direct.actif ? "live-badge live-now" : "live-badge"}>
+                {direct.actif ? "● EN DIRECT" : "○ DIRECT À VENIR"}
+              </span>
+              <h3 style={{ margin: "18px 0 10px", fontSize: "clamp(28px, 4vw, 48px)", color: "#fff" }}>
+                {direct.titre}
+              </h3>
+              <p style={{ margin: "0 0 22px", color: "rgba(255,255,255,.82)", fontSize: "17px", lineHeight: 1.7, maxWidth: "680px" }}>
+                {direct.sousTitre}
+              </p>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  style={styles.button}
+                  onClick={() => window.open(direct.url, "_blank", "noopener,noreferrer")}
+                >
+                  {direct.actif ? "REGARDER LE DIRECT" : "OUVRIR LA CHAÎNE JADCI"}
+                </button>
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => setDirect((ancienne) => ({ ...ancienne, actif: !ancienne.actif }))}
+                >
+                  MODE DÉMO : {direct.actif ? "ARRÊTER" : "ACTIVER"}
+                </button>
+              </div>
+            </div>
+            <div className="media-play" aria-hidden="true">▶</div>
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: "20px", flexWrap: "wrap", marginBottom: "25px" }}>
+            <div>
+              <h3 style={styles.sectionTitle}>CONTENUS À LA UNE</h3>
+              <p style={styles.sectionText}>Prédications, événements et contenus vidéo.</p>
+            </div>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              {["TOUT", "PRÉDICATION", "ÉVÉNEMENT"].map((filtre) => (
+                <button
+                  key={filtre}
+                  type="button"
+                  style={mediaFiltre === filtre ? styles.button : styles.secondaryButton}
+                  onClick={() => setMediaFiltre(filtre)}
+                >
+                  {filtre}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={styles.cards}>
+            {mediasFiltres.map((media) => (
+              <article className="interactive-card media-card" style={styles.card} key={media.id}>
+                <div className="media-cover">
+                  <div className="media-cover-ring">
+                    <img src={logoJadci} alt="JADCI" />
+                  </div>
+                  <span>{media.type}</span>
+                </div>
+                <div style={{ paddingTop: "18px" }}>
+                  <div style={{ color: "#64748b", fontSize: "13px", fontWeight: 800, marginBottom: "7px" }}>{media.date} • {media.intervenant}</div>
+                  <h3 style={styles.cardTitle}>{media.titre}</h3>
+                  <p style={styles.cardText}>{media.description}</p>
+                  <button
+                    type="button"
+                    style={styles.secondaryButton}
+                    onClick={() => window.open(media.url, "_blank", "noopener,noreferrer")}
+                  >
+                    REGARDER / ÉCOUTER →
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        {adminConnecte && (
+          <section style={styles.section}>
+            <div style={styles.adminBox}>
+              <h3 style={styles.cardTitle}>CONFIGURATION DU DIRECT — MODE TEST</h3>
+              <p style={styles.sectionText}>
+                En production, cette zone pourra être reliée à YouTube Live, Facebook Live ou une solution de streaming dédiée.
+              </p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "10px 18px", marginTop: "20px" }}>
+                <div>
+                  <label style={styles.label}>TITRE DU DIRECT</label>
+                  <input style={styles.input} value={direct.titre} onChange={(e) => setDirect((d) => ({ ...d, titre: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={styles.label}>LIEN DU DIRECT / CHAÎNE</label>
+                  <input style={styles.input} value={direct.url} onChange={(e) => setDirect((d) => ({ ...d, url: e.target.value }))} />
+                </div>
+              </div>
+              <label style={styles.label}>MESSAGE</label>
+              <textarea style={{ ...styles.input, minHeight: "100px", resize: "vertical" }} value={direct.sousTitre} onChange={(e) => setDirect((d) => ({ ...d, sousTitre: e.target.value }))} />
+              <button type="button" style={styles.button} onClick={() => setDirect((d) => ({ ...d, actif: !d.actif }))}>
+                {direct.actif ? "DÉSACTIVER LE MODE DIRECT" : "ACTIVER LE MODE DIRECT"}
+              </button>
+            </div>
+          </section>
+        )}
+      </>
+    );
+  };
+
+  const renderAnnonces = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <span className="live-badge">● ACTUALITÉS JADCI</span>
+          <h2 style={styles.sectionTitle}>ANNONCES, PROGRAMMES & ARTICLES</h2>
+          <p style={styles.sectionText}>
+            Les communications officielles, les articles et les prochains programmes sont regroupés ici.
+          </p>
+        </div>
+
+        <div style={styles.cards}>
+          {articles.map((article) => (
+            <article className="interactive-card" style={styles.card} key={article.id}>
+              {article.image ? (
+                <img src={article.image} alt="" style={{ width: "100%", height: "210px", objectFit: "cover", borderRadius: "15px", marginBottom: "16px" }} />
+              ) : (
+                <div className="media-cover" style={{ marginBottom: "16px" }}>
+                  <div className="media-cover-ring"><img src={logoJadci} alt="JADCI" /></div>
+                  <span>{article.categorie}</span>
+                </div>
+              )}
+              <div style={{ color: "#64748b", fontSize: "13px", fontWeight: 800 }}>
+                {article.categorie} • {article.datePublication}
+                {article.dateEvenement ? ` • PROGRAMME : ${article.dateEvenement}` : ""}
+              </div>
+              <h3 style={styles.cardTitle}>{article.titre}</h3>
+              <p style={styles.cardText}>{article.contenu}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h3 style={styles.sectionTitle}>CALENDRIER DES PROCHAINS PROGRAMMES</h3>
+        </div>
+        <div style={styles.cards}>
+          {articles.filter((a) => a.dateEvenement).sort((a, b) => a.dateEvenement.localeCompare(b.dateEvenement)).map((article) => (
+            <div className="interactive-card" style={styles.card} key={`event-${article.id}`}>
+              <div className="live-badge">{article.dateEvenement}</div>
+              <h4 style={styles.cardTitle}>{article.titre}</h4>
+              <p style={styles.cardText}>{article.contenu}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.homeMediaStrip}>
+          <div>
+            <span className="live-badge">● SOLIDARITÉ</span>
+            <h3 style={{ margin: "14px 0 8px", color: "#fff", fontSize: "clamp(28px, 4vw, 40px)" }}>
+              Soutenir un projet JADCI
+            </h3>
+            <p style={{ margin: 0, color: "rgba(255,255,255,.78)", lineHeight: 1.7 }}>
+              Le soutien libre sera connecté au paiement sécurisé lorsque Supabase et le prestataire de paiement seront branchés.
+            </p>
+          </div>
+          <button type="button" style={styles.button} onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}>
+            VOIR LES PROJETS
+          </button>
+        </div>
+
+        <div style={{ ...styles.cards, marginTop: "22px" }}>
+          {projets.filter((p) => p.actif).map((p) => {
+            const objectif = Number(p.objectif) || 0;
+            const collecte = Number(p.collecte) || 0;
+            const pct = objectif ? Math.min(100, Math.round((collecte / objectif) * 100)) : 0;
+            return (
+              <article className="interactive-card" style={styles.card} key={p.id}>
+                {p.image && <img src={p.image} alt="" style={{ width: "100%", height: "180px", objectFit: "cover", borderRadius: "14px" }} />}
+                <h3 style={styles.cardTitle}>{p.titre}</h3>
+                <p style={styles.cardText}>{p.description}</p>
+                <div style={{ height: "9px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#5420a8,#2456d8)" }} />
+                </div>
+                <p style={{ color: "#475569", fontWeight: 800 }}>
+                  {collecte.toLocaleString("fr-FR")} / {objectif.toLocaleString("fr-FR")} FCFA
+                </p>
+                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <button type="button" style={styles.button} onClick={() => soutenirProjet(p.id, 1000)}>SOUTENIR 1 000 FCFA (TEST)</button>
+                  <button type="button" style={styles.secondaryButton} onClick={() => window.alert("Le paiement sécurisé sera branché avec Supabase / le prestataire de paiement.")}>PAIEMENT LIBRE</button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.card}>
+          <span className="live-badge">★ JEUNE LEADER DU MOIS</span>
+          <div style={{ display: "flex", gap: "22px", alignItems: "center", flexWrap: "wrap", marginTop: "18px" }}>
+            {leaderMois.photo ? (
+              <img src={leaderMois.photo} alt={leaderMois.nom} style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "50%", border: "6px solid #f1eaff" }} />
+            ) : (
+              <div style={{ width: "150px", height: "150px", borderRadius: "50%", display: "grid", placeItems: "center", background: "linear-gradient(135deg,#5420a8,#2456d8)", color: "#fff", fontSize: "48px" }}>★</div>
+            )}
+            <div style={{ flex: 1, minWidth: "240px" }}>
+              <h3 style={{ ...styles.sectionTitle, fontSize: "32px" }}>{leaderMois.nom}</h3>
+              <p style={styles.sectionText}>{leaderMois.presentation}</p>
+              <strong style={{ color: "#5420a8" }}>{leaderMois.mois}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  )
+
+
+  return (
+    <div style={styles.app}>
+
+      <style>{`
+        .admin-success {
+          padding: 13px 16px;
+          border-radius: 12px;
+          background: #ecfdf5;
+          border: 1px solid #a7f3d0;
+          color: #047857;
+          font-weight: 800;
+        }
+
+        @keyframes heroFloat {
+          0%, 100% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(.35deg); }
+        }
+
+        @keyframes logoFloat {
+          0%, 100% { transform: translateY(0) scale(1); }
+          50% { transform: translateY(-13px) scale(1.025); }
+        }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(24px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes shine {
+          0% { background-position: 0% 50%; }
+          100% { background-position: 200% 50%; }
+        }
+
+        @keyframes announcementIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes orbit {
+          from { transform: rotate(0deg) translateX(175px) rotate(0deg); }
+          to { transform: rotate(360deg) translateX(175px) rotate(-360deg); }
+        }
+
+        @keyframes orbitReverse {
+          from { transform: rotate(360deg) translateX(220px) rotate(-360deg); }
+          to { transform: rotate(0deg) translateX(220px) rotate(0deg); }
+        }
+
+        @keyframes sparkle {
+          0%, 100% { opacity: .25; transform: scale(.65); }
+          50% { opacity: 1; transform: scale(1.25); }
+        }
+
+        @keyframes missionPulse {
+          0%, 100% { text-shadow: 0 0 0 rgba(253,224,71,0); }
+          50% { text-shadow: 0 0 22px rgba(253,224,71,.5); }
+        }
+
+        .reveal {
+          animation: fadeUp .8s cubic-bezier(.2,.8,.2,1) both;
+        }
+
+        .reveal-delay-1 { animation-delay: .08s; }
+        .reveal-delay-2 { animation-delay: .18s; }
+        .reveal-delay-3 { animation-delay: .28s; }
+
+        .gradient-text {
+          background: linear-gradient(90deg, #6428c7, #8b5cf6, #2456d8, #6428c7);
+          background-size: 200% auto;
+          -webkit-background-clip: text;
+          background-clip: text;
+          -webkit-text-fill-color: transparent;
+          animation: shine 4s linear infinite;
+        }
+
+        .interactive-card {
+          transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
+          will-change: transform;
+        }
+
+        .interactive-card:hover {
+          transform: translateY(-9px);
+          border-color: #c4b5fd;
+          box-shadow: 0 24px 55px rgba(76,29,149,.13) !important;
+        }
+
+        .announcementViewport {
+          overflow: hidden;
+        }
+
+        .announcementSlide {
+          display: inline-block;
+          animation: announcementIn .55s cubic-bezier(.2,.8,.2,1) both;
+        }
+
+        .hero-orbit {
+          position: absolute;
+          left: 50%;
+          top: 46%;
+          width: 10px;
+          height: 10px;
+          margin: -5px;
+          border-radius: 50%;
+          background: rgba(255,255,255,.9);
+          box-shadow: 0 0 18px rgba(255,255,255,.8);
+          pointer-events: none;
+        }
+
+        .hero-orbit-1 {
+          animation: orbit 9s linear infinite;
+        }
+
+        .hero-orbit-2 {
+          width: 7px;
+          height: 7px;
+          animation: orbitReverse 12s linear infinite;
+          opacity: .8;
+        }
+
+        .hero-spark {
+          position: absolute;
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #fde047;
+          box-shadow: 0 0 20px rgba(253,224,71,.9);
+          animation: sparkle 2.8s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        .spark-1 { top: 18%; left: 16%; animation-delay: .2s; }
+        .spark-2 { top: 27%; right: 15%; animation-delay: .9s; }
+        .spark-3 { bottom: 18%; left: 20%; animation-delay: 1.5s; }
+
+        .mission-pulse {
+          animation: missionPulse 2.6s ease-in-out infinite;
+        }
+
+        .live-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 7px;
+          padding: 7px 11px;
+          border-radius: 999px;
+          background: rgba(255,255,255,.13);
+          color: #fde047;
+          border: 1px solid rgba(255,255,255,.18);
+          font-size: 12px;
+          font-weight: 900;
+          letter-spacing: .5px;
+        }
+
+        .live-now {
+          animation: missionPulse 1.7s ease-in-out infinite;
+        }
+
+        .media-glow {
+          position: absolute;
+          width: 260px;
+          height: 260px;
+          border-radius: 50%;
+          filter: blur(5px);
+          opacity: .28;
+          background: #8b5cf6;
+          animation: logoFloat 6s ease-in-out infinite;
+        }
+
+        .media-glow-1 { top: -100px; right: 8%; }
+        .media-glow-2 { bottom: -150px; left: 10%; background: #60a5fa; animation-delay: 1s; }
+
+        .media-play {
+          position: absolute;
+          right: 8%;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 125px;
+          height: 125px;
+          border-radius: 50%;
+          display: grid;
+          place-items: center;
+          background: rgba(255,255,255,.12);
+          border: 1px solid rgba(255,255,255,.28);
+          color: #fff;
+          font-size: 38px;
+          box-shadow: 0 0 50px rgba(255,255,255,.12);
+          animation: logoFloat 3.8s ease-in-out infinite;
+        }
+
+        .media-cover img {
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+        }
+
+        .media-card {
+          overflow: hidden;
+        }
+
+        @media (max-width: 900px) {
+          .hero-orbit-1 { animation-duration: 12s; }
+          .hero-orbit-2 { animation-duration: 15s; }
+        }
+
+        @media (max-width: 900px) {
+          .media-play { display: none; }
+        }
+
+        @media (max-width: 640px) {
+          .mediaHero { padding: 35px 24px !important; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          *, *::before, *::after {
+            animation-duration: .01ms !important;
+            animation-iteration-count: 1 !important;
+            scroll-behavior: auto !important;
+          }
+        }
+      `}</style>
+
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <div style={styles.brand}>
+            <img
+              src={logoJadci}
+              alt="Logo JADCI"
+              style={styles.brandLogo}
+            />
+
+            <div>
+              <h1 style={styles.brandTitle}>JADCI</h1>
+              <p style={styles.brandSubtitle}>
+                Jeunesse des Assemblées de Dieu de Côte d'Ivoire
+              </p>
+            </div>
+          </div>
+
+          <nav style={styles.nav} aria-label="Navigation principale">
+            {navItems.map(([destination, label]) => (
+              <button
+                type="button"
+                key={destination}
+                style={styles.navButton(page === destination)}
+                onClick={() => aller(destination)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <div style={styles.announcement}>
+        <div style={styles.announcementTitle}>ANNONCE</div>
+        <div style={styles.announcementText}>
+          {annonces[annonceActive] || "Bienvenue sur la plateforme officielle JADCI."}
+        </div>
+      </div>
+
+      <main style={styles.main}>
+        {page === "accueil" && renderAccueil()}
+        {page === "portail" && renderPortail()}
+        {page === "utilisateurs" && renderUtilisateurs()}
+        {page === "eglises" && renderEglises()}
+        {page === "medias" && renderMedias()}
+        {page === "boutique" && renderBoutique()}
+        {page === "annonces" && renderAnnonces()}
+      </main>
+
+      <footer style={styles.footer}>
+        <img
+          className="interactive-card"
+          src={logoJadci}
+          alt="Logo JADCI"
+          style={styles.footerLogo}
+        />
+
+        <h3 style={{ margin: "0 0 8px", fontSize: "24px" }}>JADCI</h3>
+
+        <p style={{ margin: "0 0 8px", opacity: 0.85 }}>
+          JEUNESSE DES ASSEMBLÉES DE DIEU DE CÔTE D'IVOIRE
+        </p>
+
+        <strong style={{ color: "#fde047" }}>FOI • SERVICE • MISSION</strong>
+
+        <p
+          style={{
+            marginTop: "22px",
+            opacity: 0.5,
+            fontSize: "12px",
+          }}
+        >
+          Plateforme JADCI — Version de développement
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+export default App;

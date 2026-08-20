@@ -1,0 +1,2025 @@
+import { useEffect, useMemo, useState } from "react";
+import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
+import logoJadci from "./assets/logo-jadci.png";
+import heroJeunesse1 from "./assets/hero-jeunesse-1.jpg";
+import heroJeunesse2 from "./assets/hero-jeunesse-2.jpg";
+import heroJeunesse3 from "./assets/hero-jeunesse-3.jpg";
+import "./App.css";
+
+/* ------------------------------------------------------------------ */
+/* Données de référence                                                */
+/* ------------------------------------------------------------------ */
+
+const heroBackgrounds = [heroJeunesse1, heroJeunesse2, heroJeunesse3];
+
+const eglisesInitiales = [
+  {
+    id: 1,
+    nom: "AD Temple de la Grâce",
+    pasteur: "Pasteur responsable",
+    telephone: "",
+    ville: "Abidjan",
+    commune: "Cocody",
+    quartier: "Riviera",
+    localisation: "",
+    statut: "VALIDÉE",
+    responsableId: null,
+  },
+  {
+    id: 2,
+    nom: "AD Temple de la Gloire",
+    pasteur: "Pasteur responsable",
+    telephone: "",
+    ville: "Abidjan",
+    commune: "Yopougon",
+    quartier: "Selmer",
+    localisation: "",
+    statut: "VALIDÉE",
+    responsableId: null,
+  },
+  {
+    id: 3,
+    nom: "AD Temple de la Victoire",
+    pasteur: "Pasteur responsable",
+    telephone: "",
+    ville: "Bouaké",
+    commune: "Bouaké",
+    quartier: "Centre",
+    localisation: "",
+    statut: "VALIDÉE",
+    responsableId: null,
+  },
+];
+
+const produitsInitiaux = [
+  { id: 1, nom: "Livre évangélique", categorie: "LIVRES", prix: 5000, description: "Ressource chrétienne disponible dans la boutique JADCI.", stock: 12, appreciation: 5, image: "" },
+  { id: 2, nom: "Vêtement JADCI", categorie: "VÊTEMENTS", prix: 10000, description: "Vêtement officiel JADCI.", stock: 8, appreciation: 5, image: "" },
+  { id: 3, nom: "Gadget JADCI", categorie: "GADGETS", prix: 5000, description: "Accessoire JADCI.", stock: 15, appreciation: 4, image: "" },
+  { id: 4, nom: "Carte Jeune JADCI", categorie: "SERVICES", prix: 1000, description: "Carte physique Jeune JADCI.", stock: 50, appreciation: 5, image: "" },
+];
+
+const articlesInitiaux = [
+  {
+    id: 1,
+    titre: "Bienvenue sur la plateforme officielle JADCI",
+    contenu: "Retrouvez ici les actualités, les programmes et les ressources de la jeunesse.",
+    image: "",
+    videoUrl: "",
+    documentUrl: "",
+    datePublication: new Date().toISOString().slice(0, 10),
+    dateEvenement: "",
+    categorie: "ACTUALITÉ",
+  },
+];
+
+const projetsCommunautairesInitiaux = [
+  {
+    id: 1,
+    titre: "Soutenir un projet jeunesse",
+    description: "Participez librement au financement des initiatives de la jeunesse JADCI.",
+    objectif: 1000000,
+    collecte: 0,
+    image: "",
+    actif: true,
+  },
+];
+
+const directInitial = {
+  actif: false,
+  titre: "Direct JADCI",
+  sousTitre: "Le direct officiel sera disponible ici.",
+  url: "https://www.youtube.com/@JADCI",
+};
+
+const leaderInitial = {
+  nom: "À définir",
+  photo: "",
+  presentation: "Le jeune leader du mois sera présenté ici.",
+  mois: new Date().toISOString().slice(0, 7),
+};
+
+const comptesAdmin = [
+  { matricule: "AGENT-X-26", motDePasse: "JADCI-X-2026", role: "GENERAL", label: "Administrateur général" },
+  { matricule: "ADM-MKT-26", motDePasse: "Treso-Store-26", role: "MARKETING", label: "Admin Marketing" },
+  { matricule: "ADM-MKT-26", motDePasse: "JADCI-Com26", role: "COM", label: "Admin Communication" },
+];
+
+const profilVideInscriptionJeune = {
+  nom: "",
+  telephone: "",
+  email: "",
+  motDePasse: "",
+  confirmation: "",
+};
+
+const profilVideInscriptionResponsable = {
+  nom: "",
+  telephone: "",
+  email: "",
+  motDePasse: "",
+  confirmation: "",
+};
+
+const connexionVide = { email: "", motDePasse: "" };
+
+/* ------------------------------------------------------------------ */
+/* Utilitaires                                                         */
+/* ------------------------------------------------------------------ */
+
+function useLocalStorageState(key, initialValue) {
+  const [value, setValue] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : initialValue;
+    } catch {
+      return initialValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+      // Le stockage local peut être indisponible dans certains modes de navigation.
+    }
+  }, [key, value]);
+
+  return [value, setValue];
+}
+
+const lireFichierEnBase64 = (fichier) =>
+  new Promise((resolve, reject) => {
+    if (!fichier) {
+      resolve("");
+      return;
+    }
+    const lecteur = new FileReader();
+    lecteur.onload = () => resolve(lecteur.result);
+    lecteur.onerror = reject;
+    lecteur.readAsDataURL(fichier);
+  });
+
+const formaterMatricule = (prefixe, sequence) => `${prefixe}-${String(sequence).padStart(6, "0")}`;
+
+const exporterExcel = (donnees, nomFeuille, nomFichier) => {
+  if (!donnees || donnees.length === 0) return;
+  const feuille = XLSX.utils.json_to_sheet(donnees);
+  const classeur = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(classeur, feuille, nomFeuille.slice(0, 31));
+  XLSX.writeFile(classeur, `${nomFichier}.xlsx`);
+};
+
+/* ------------------------------------------------------------------ */
+/* Composant principal                                                 */
+/* ------------------------------------------------------------------ */
+
+function App() {
+  const [page, setPage] = useState("accueil");
+  const [indexFond, setIndexFond] = useState(0);
+
+  // Contenu éditorial
+  const [annonces, setAnnonces] = useLocalStorageState("jadci_annonces", [
+    "Bienvenue sur la plateforme officielle JADCI.",
+    "Les inscriptions Jeunes et Responsables sont ouvertes.",
+    "Carte Jeune JADCI : 1 000 FCFA.",
+  ]);
+  const [annonceActive, setAnnonceActive] = useState(0);
+  const [nouvelleAnnonce, setNouvelleAnnonce] = useState("");
+
+  const [articles, setArticles] = useLocalStorageState("jadci_articles", articlesInitiaux);
+  const [direct, setDirect] = useLocalStorageState("jadci_direct", directInitial);
+  const [leaderMois, setLeaderMois] = useLocalStorageState("jadci_leader", leaderInitial);
+  const [projetsCommunautaires, setProjetsCommunautaires] = useLocalStorageState(
+    "jadci_projets_communautaires",
+    projetsCommunautairesInitiaux
+  );
+
+  // Églises
+  const [eglises, setEglises] = useLocalStorageState("jadci_eglises_v2", eglisesInitiales);
+  const [rechercheEglise, setRechercheEglise] = useState("");
+
+  // Boutique
+  const [produits, setProduits] = useLocalStorageState("jadci_produits_v2", produitsInitiaux);
+  const [panier, setPanier] = useState([]);
+  const [commandeMessage, setCommandeMessage] = useState("");
+
+  // Séquences de matricules et de reçus
+  const [seqJeune, setSeqJeune] = useLocalStorageState("jadci_seq_jeune", 0);
+  const [seqResponsable, setSeqResponsable] = useLocalStorageState("jadci_seq_responsable", 0);
+  const [seqRecu, setSeqRecu] = useLocalStorageState("jadci_seq_recu", 0);
+
+  // Espace Jeunes
+  const [comptesJeunes, setComptesJeunes] = useLocalStorageState("jadci_comptes_jeunes_v2", []);
+  const [jeuneConnecte, setJeuneConnecte] = useLocalStorageState("jadci_session_jeune", null);
+  const [modeEspaceJeune, setModeEspaceJeune] = useState("connexion");
+  const [connexionJeune, setConnexionJeune] = useState(connexionVide);
+  const [inscriptionJeune, setInscriptionJeune] = useState(profilVideInscriptionJeune);
+  const [messageEspaceJeune, setMessageEspaceJeune] = useState("");
+  const [ongletJeune, setOngletJeune] = useState("bureau");
+
+  // Espace Responsables
+  const [comptesResponsables, setComptesResponsables] = useLocalStorageState("jadci_comptes_responsables_v2", []);
+  const [responsableConnecte, setResponsableConnecte] = useLocalStorageState("jadci_session_responsable", null);
+  const [modeEspaceResponsable, setModeEspaceResponsable] = useState("connexion");
+  const [connexionResponsable, setConnexionResponsable] = useState(connexionVide);
+  const [inscriptionResponsable, setInscriptionResponsable] = useState(profilVideInscriptionResponsable);
+  const [messageEspaceResponsable, setMessageEspaceResponsable] = useState("");
+  const [ongletResponsable, setOngletResponsable] = useState("bureau");
+
+  // Convocations (créées par l'administration générale)
+  const [convocations, setConvocations] = useLocalStorageState("jadci_convocations", []);
+
+  // Administration (3 niveaux)
+  const [adminSession, setAdminSession] = useState(null);
+  const [matriculeAdmin, setMatriculeAdmin] = useState("");
+  const [motDePasseAdmin, setMotDePasseAdmin] = useState("");
+  const [erreurAdmin, setErreurAdmin] = useState("");
+  const [adminTab, setAdminTab] = useState("dashboard");
+  const [adminMessage, setAdminMessage] = useState("");
+
+  useEffect(() => {
+    if (annonces.length < 2) return undefined;
+    const timer = window.setInterval(() => {
+      setAnnonceActive((i) => (i + 1) % annonces.length);
+    }, 4500);
+    return () => window.clearInterval(timer);
+  }, [annonces.length]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setIndexFond((i) => (i + 1) % heroBackgrounds.length);
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const aller = (destination) => {
+    setPage(destination);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  /* ------------------------------ Églises ------------------------------ */
+
+  const eglisesValidees = eglises.filter((e) => e.statut === "VALIDÉE");
+  const eglisesFiltrees = eglisesValidees.filter((eglise) => {
+    const recherche = rechercheEglise.toLowerCase().trim();
+    if (!recherche) return true;
+    return (
+      eglise.nom.toLowerCase().includes(recherche) ||
+      eglise.ville.toLowerCase().includes(recherche) ||
+      (eglise.commune || "").toLowerCase().includes(recherche) ||
+      (eglise.quartier || "").toLowerCase().includes(recherche)
+    );
+  });
+
+  const enregistrerEglise = (event) => {
+    event.preventDefault();
+    if (!responsableConnecte) return;
+    const form = new FormData(event.target);
+    const nom = (form.get("nom") || "").toString().trim();
+    const pasteur = (form.get("pasteur") || "").toString().trim();
+    const telephone = (form.get("telephone") || "").toString().trim();
+    const ville = (form.get("ville") || "").toString().trim();
+    const commune = (form.get("commune") || "").toString().trim();
+    const quartier = (form.get("quartier") || "").toString().trim();
+    const localisation = (form.get("localisation") || "").toString().trim();
+
+    if (!nom || !pasteur || !ville) return;
+
+    setEglises((liste) => [
+      ...liste,
+      {
+        id: Date.now(),
+        nom,
+        pasteur,
+        telephone,
+        ville,
+        commune,
+        quartier,
+        localisation,
+        statut: "EN ATTENTE",
+        responsableId: responsableConnecte.id,
+      },
+    ]);
+    event.target.reset();
+  };
+
+  const validerEglise = (id, statut) => {
+    setEglises((liste) => liste.map((e) => (e.id === id ? { ...e, statut } : e)));
+    setAdminMessage(`Église ${statut === "VALIDÉE" ? "validée" : "mise à jour"}.`);
+  };
+
+  /* --------------------------- Espace Jeunes ---------------------------- */
+
+  const creerCompteJeune = async (event) => {
+    event.preventDefault();
+    const { nom, telephone, email, motDePasse, confirmation } = inscriptionJeune;
+
+    if (!nom.trim() || !telephone.trim() || !email.trim() || !motDePasse.trim()) {
+      setMessageEspaceJeune("Merci de compléter tous les champs obligatoires.");
+      return;
+    }
+    if (motDePasse !== confirmation) {
+      setMessageEspaceJeune("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    if (comptesJeunes.some((c) => c.email.toLowerCase() === email.trim().toLowerCase())) {
+      setMessageEspaceJeune("Un compte existe déjà avec cet e-mail.");
+      return;
+    }
+
+    const nouvelleSequence = seqJeune + 1;
+    const matricule = formaterMatricule("JAD", nouvelleSequence);
+
+    const nouveauCompte = {
+      id: Date.now(),
+      matricule,
+      nom: nom.trim(),
+      telephone: telephone.trim(),
+      email: email.trim(),
+      motDePasse,
+      photo: "",
+      dateNaissance: "",
+      eglise: "",
+      bapteme: "",
+      situationMatrimoniale: "",
+      cvNom: "",
+      cvData: "",
+      requetes: [],
+      projets: [],
+      commandes: [],
+      creeLe: new Date().toLocaleDateString("fr-FR"),
+    };
+
+    setSeqJeune(nouvelleSequence);
+    setComptesJeunes((liste) => [...liste, nouveauCompte]);
+    setJeuneConnecte(nouveauCompte);
+    setInscriptionJeune(profilVideInscriptionJeune);
+    setMessageEspaceJeune("");
+    setOngletJeune("bureau");
+  };
+
+  const connecterJeune = (event) => {
+    event.preventDefault();
+    const compte = comptesJeunes.find(
+      (c) => c.email.toLowerCase() === connexionJeune.email.trim().toLowerCase()
+    );
+    if (!compte || compte.motDePasse !== connexionJeune.motDePasse) {
+      setMessageEspaceJeune("E-mail ou mot de passe incorrect.");
+      return;
+    }
+    setJeuneConnecte(compte);
+    setConnexionJeune(connexionVide);
+    setMessageEspaceJeune("");
+  };
+
+  const deconnecterJeune = () => {
+    setJeuneConnecte(null);
+    setModeEspaceJeune("connexion");
+    setOngletJeune("bureau");
+  };
+
+  const majProfilJeune = (champs) => {
+    if (!jeuneConnecte) return;
+    setComptesJeunes((liste) => liste.map((c) => (c.id === jeuneConnecte.id ? { ...c, ...champs } : c)));
+    setJeuneConnecte((s) => ({ ...s, ...champs }));
+  };
+
+  const ajouterAEspaceJeune = (champ, entree) => {
+    if (!jeuneConnecte) return;
+    setComptesJeunes((liste) =>
+      liste.map((c) => (c.id === jeuneConnecte.id ? { ...c, [champ]: [entree, ...(c[champ] || [])] } : c))
+    );
+    setJeuneConnecte((s) => ({ ...s, [champ]: [entree, ...(s[champ] || [])] }));
+  };
+
+  const soumettreRequeteJeune = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const texte = (form.get("requete") || "").toString().trim();
+    if (!texte) return;
+    ajouterAEspaceJeune("requetes", { id: Date.now(), texte, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" });
+    event.target.reset();
+  };
+
+  const soumettreProjetJeune = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const titre = (form.get("titre") || "").toString().trim();
+    const description = (form.get("description") || "").toString().trim();
+    if (!titre) return;
+    ajouterAEspaceJeune("projets", { id: Date.now(), titre, description, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" });
+    event.target.reset();
+  };
+
+  /* ------------------------- Espace Responsables ------------------------- */
+
+  const creerCompteResponsable = async (event) => {
+    event.preventDefault();
+    const { nom, telephone, email, motDePasse, confirmation } = inscriptionResponsable;
+
+    if (!nom.trim() || !telephone.trim() || !email.trim() || !motDePasse.trim()) {
+      setMessageEspaceResponsable("Merci de compléter tous les champs obligatoires.");
+      return;
+    }
+    if (motDePasse !== confirmation) {
+      setMessageEspaceResponsable("Les mots de passe ne correspondent pas.");
+      return;
+    }
+    if (comptesResponsables.some((c) => c.email.toLowerCase() === email.trim().toLowerCase())) {
+      setMessageEspaceResponsable("Un compte existe déjà avec cet e-mail.");
+      return;
+    }
+
+    const nouvelleSequence = seqResponsable + 1;
+    const matricule = formaterMatricule("RR", nouvelleSequence);
+
+    const nouveauCompte = {
+      id: Date.now(),
+      matricule,
+      nom: nom.trim(),
+      telephone: telephone.trim(),
+      email: email.trim(),
+      motDePasse,
+      photo: "",
+      dateNaissance: "",
+      eglise: "",
+      bapteme: "",
+      situationMatrimoniale: "",
+      requetes: [],
+      projets: [],
+      commandes: [],
+      candidatures: [],
+      recommandations: [],
+      rapports: [],
+      reponsesConvocations: [],
+      creeLe: new Date().toLocaleDateString("fr-FR"),
+    };
+
+    setSeqResponsable(nouvelleSequence);
+    setComptesResponsables((liste) => [...liste, nouveauCompte]);
+    setResponsableConnecte(nouveauCompte);
+    setInscriptionResponsable(profilVideInscriptionResponsable);
+    setMessageEspaceResponsable("");
+    setOngletResponsable("bureau");
+  };
+
+  const connecterResponsable = (event) => {
+    event.preventDefault();
+    const compte = comptesResponsables.find(
+      (c) => c.email.toLowerCase() === connexionResponsable.email.trim().toLowerCase()
+    );
+    if (!compte || compte.motDePasse !== connexionResponsable.motDePasse) {
+      setMessageEspaceResponsable("E-mail ou mot de passe incorrect.");
+      return;
+    }
+    setResponsableConnecte(compte);
+    setConnexionResponsable(connexionVide);
+    setMessageEspaceResponsable("");
+  };
+
+  const deconnecterResponsable = () => {
+    setResponsableConnecte(null);
+    setModeEspaceResponsable("connexion");
+    setOngletResponsable("bureau");
+  };
+
+  const majProfilResponsable = (champs) => {
+    if (!responsableConnecte) return;
+    setComptesResponsables((liste) => liste.map((c) => (c.id === responsableConnecte.id ? { ...c, ...champs } : c)));
+    setResponsableConnecte((s) => ({ ...s, ...champs }));
+  };
+
+  const ajouterAEspaceResponsable = (champ, entree) => {
+    if (!responsableConnecte) return;
+    setComptesResponsables((liste) =>
+      liste.map((c) => (c.id === responsableConnecte.id ? { ...c, [champ]: [entree, ...(c[champ] || [])] } : c))
+    );
+    setResponsableConnecte((s) => ({ ...s, [champ]: [entree, ...(s[champ] || [])] }));
+  };
+
+  const soumettreRequeteResponsable = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const texte = (form.get("requete") || "").toString().trim();
+    if (!texte) return;
+    ajouterAEspaceResponsable("requetes", { id: Date.now(), texte, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" });
+    event.target.reset();
+  };
+
+  const soumettreProjetResponsable = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const titre = (form.get("titre") || "").toString().trim();
+    const description = (form.get("description") || "").toString().trim();
+    if (!titre) return;
+    ajouterAEspaceResponsable("projets", { id: Date.now(), titre, description, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" });
+    event.target.reset();
+  };
+
+  const soumettreCandidature = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const poste = (form.get("poste") || "").toString().trim();
+    const motivation = (form.get("motivation") || "").toString().trim();
+    if (!poste) return;
+    ajouterAEspaceResponsable("candidatures", { id: Date.now(), poste, motivation, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" });
+    event.target.reset();
+  };
+
+  const soumettreRecommandation = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const personne = (form.get("personne") || "").toString().trim();
+    const motif = (form.get("motif") || "").toString().trim();
+    if (!personne) return;
+    ajouterAEspaceResponsable("recommandations", { id: Date.now(), personne, motif, date: new Date().toLocaleDateString("fr-FR") });
+    event.target.reset();
+  };
+
+  const soumettreRapport = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const titre = (form.get("titre") || "").toString().trim();
+    const contenu = (form.get("contenu") || "").toString().trim();
+    if (!titre) return;
+    ajouterAEspaceResponsable("rapports", { id: Date.now(), titre, contenu, date: new Date().toLocaleDateString("fr-FR") });
+    event.target.reset();
+  };
+
+  const repondreConvocation = (convocationId, statut, commentaire) => {
+    ajouterAEspaceResponsable("reponsesConvocations", {
+      id: Date.now(),
+      convocationId,
+      statut,
+      commentaire,
+      participationStatut: null,
+      date: new Date().toLocaleDateString("fr-FR"),
+    });
+  };
+
+  const signalerParticipationPayee = (reponseId) => {
+    if (!responsableConnecte) return;
+    const misAJour = (responsableConnecte.reponsesConvocations || []).map((r) =>
+      r.id === reponseId ? { ...r, participationStatut: "SIGNALÉE" } : r
+    );
+    majProfilResponsable({ reponsesConvocations: misAJour });
+  };
+
+  const confirmerParticipation = (responsableId, reponseId) => {
+    setComptesResponsables((liste) =>
+      liste.map((c) =>
+        c.id === responsableId
+          ? {
+              ...c,
+              reponsesConvocations: (c.reponsesConvocations || []).map((r) =>
+                r.id === reponseId ? { ...r, participationStatut: "CONFIRMÉE" } : r
+              ),
+            }
+          : c
+      )
+    );
+    setAdminMessage("Participation confirmée.");
+  };
+
+  const creerConvocation = (event) => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    const titre = (form.get("titre") || "").toString().trim();
+    const date = (form.get("date") || "").toString();
+    const description = (form.get("description") || "").toString().trim();
+    const participationActivee = form.get("participationActivee") === "on";
+    const montantParticipation = Number(form.get("montantParticipation") || 0);
+    if (!titre) return;
+
+    setConvocations((liste) => [
+      { id: Date.now(), titre, date, description, participationActivee, montantParticipation },
+      ...liste,
+    ]);
+    event.target.reset();
+    setAdminMessage("Convocation publiée.");
+  };
+
+  /* ------------------------------- Boutique ------------------------------- */
+
+  const ajouterAuPanier = (produit) => {
+    if ((produit.stock ?? 0) <= 0) {
+      setCommandeMessage("Ce produit est en rupture de stock.");
+      return;
+    }
+    setPanier((ancien) => {
+      const existe = ancien.find((item) => item.id === produit.id);
+      if (existe) {
+        return ancien.map((item) => (item.id === produit.id ? { ...item, quantite: item.quantite + 1 } : item));
+      }
+      return [...ancien, { ...produit, quantite: 1 }];
+    });
+    setCommandeMessage(`${produit.nom} ajouté au panier.`);
+  };
+
+  const modifierQuantite = (id, variation) => {
+    setPanier((ancien) =>
+      ancien.map((item) => (item.id === id ? { ...item, quantite: Math.max(0, item.quantite + variation) } : item)).filter((item) => item.quantite > 0)
+    );
+  };
+
+  const totalPanier = useMemo(() => panier.reduce((total, item) => total + item.prix * item.quantite, 0), [panier]);
+
+  const proprietaireConnecte = jeuneConnecte
+    ? { type: "jeune", compte: jeuneConnecte }
+    : responsableConnecte
+    ? { type: "responsable", compte: responsableConnecte }
+    : null;
+
+  const passerCommande = () => {
+    if (!proprietaireConnecte) {
+      setCommandeMessage("Connecte-toi depuis ESPACES pour passer une commande.");
+      return;
+    }
+    if (panier.length === 0) {
+      setCommandeMessage("Ton panier est vide.");
+      return;
+    }
+
+    setProduits((liste) =>
+      liste.map((p) => {
+        const dansPanier = panier.find((item) => item.id === p.id);
+        return dansPanier ? { ...p, stock: Math.max(0, (p.stock ?? 0) - dansPanier.quantite) } : p;
+      })
+    );
+
+    const commande = {
+      id: Date.now(),
+      articles: panier.map((item) => ({ nom: item.nom, quantite: item.quantite, prix: item.prix })),
+      total: totalPanier,
+      date: new Date().toLocaleDateString("fr-FR"),
+      statut: "EN ATTENTE DE PAIEMENT",
+      codeRecu: "",
+      datePaiement: "",
+    };
+
+    if (proprietaireConnecte.type === "jeune") {
+      ajouterAEspaceJeune("commandes", commande);
+    } else {
+      ajouterAEspaceResponsable("commandes", commande);
+    }
+
+    setPanier([]);
+    setCommandeMessage("Commande enregistrée. Rends-toi dans ton espace personnel pour la payer.");
+  };
+
+  const payerCommande = (commandeId) => {
+    if (!proprietaireConnecte) return;
+    const nouvelleSequence = seqRecu + 1;
+    const codeRecu = `JAD-2026-${String(nouvelleSequence).padStart(6, "0")}`;
+    setSeqRecu(nouvelleSequence);
+
+    const champ = "commandes";
+    const majFn = (liste) =>
+      liste.map((c) =>
+        c.id === commandeId
+          ? { ...c, statut: "PAYÉE", codeRecu, datePaiement: new Date().toLocaleDateString("fr-FR") }
+          : c
+      );
+
+    if (proprietaireConnecte.type === "jeune") {
+      setComptesJeunes((liste) => liste.map((c) => (c.id === jeuneConnecte.id ? { ...c, [champ]: majFn(c[champ] || []) } : c)));
+      setJeuneConnecte((s) => ({ ...s, [champ]: majFn(s[champ] || []) }));
+    } else {
+      setComptesResponsables((liste) => liste.map((c) => (c.id === responsableConnecte.id ? { ...c, [champ]: majFn(c[champ] || []) } : c)));
+      setResponsableConnecte((s) => ({ ...s, [champ]: majFn(s[champ] || []) }));
+    }
+  };
+
+  const genererRecuPDF = (commande, compte) => {
+    const doc = new jsPDF({ unit: "mm", format: "a5" });
+    doc.setFontSize(15);
+    doc.text("JADCI — Reçu de paiement", 10, 15);
+    doc.setFontSize(10);
+    doc.text(`Client : ${compte.nom}`, 10, 27);
+    doc.text(`Matricule : ${compte.matricule}`, 10, 33);
+    doc.text(`Référence commande : CMD-${commande.id}`, 10, 39);
+    doc.text(`Code reçu : ${commande.codeRecu}`, 10, 45);
+    doc.text(`Date de paiement : ${commande.datePaiement}`, 10, 51);
+    doc.line(10, 56, 138, 56);
+
+    let y = 64;
+    doc.setFontSize(11);
+    doc.text("Produits achetés :", 10, y);
+    doc.setFontSize(10);
+    y += 7;
+    commande.articles.forEach((a) => {
+      doc.text(`${a.nom}  x${a.quantite}`, 12, y);
+      doc.text(`${(a.prix * a.quantite).toLocaleString("fr-FR")} FCFA`, 100, y, { align: "right" });
+      y += 6;
+    });
+
+    y += 4;
+    doc.line(10, y, 138, y);
+    y += 8;
+    doc.setFontSize(12);
+    doc.text(`Total payé : ${commande.total.toLocaleString("fr-FR")} FCFA`, 10, y);
+    y += 8;
+    doc.setFontSize(10);
+    doc.text(`Statut : ${commande.statut}`, 10, y);
+
+    doc.save(`recu-${commande.codeRecu}.pdf`);
+  };
+
+  /* -------------------------------- Admin -------------------------------- */
+
+  const connecterAdmin = () => {
+    const compte = comptesAdmin.find((c) => c.matricule === matriculeAdmin.trim() && c.motDePasse === motDePasseAdmin);
+    if (!compte) {
+      setErreurAdmin("Matricule ou mot de passe incorrect.");
+      return;
+    }
+    setAdminSession(compte);
+    setErreurAdmin("");
+    setMatriculeAdmin("");
+    setMotDePasseAdmin("");
+    setAdminTab("dashboard");
+  };
+
+  const deconnecterAdmin = () => {
+    setAdminSession(null);
+    setAdminTab("dashboard");
+  };
+
+  const supprimerAnnonce = (index) => {
+    setAnnonces((liste) => liste.filter((_, i) => i !== index));
+    setAdminMessage("Annonce supprimée.");
+  };
+
+  const publierAnnonce = () => {
+    const texte = nouvelleAnnonce.trim();
+    if (!texte) return;
+    setAnnonces((liste) => [texte, ...liste]);
+    setNouvelleAnnonce("");
+    setAdminMessage("Annonce publiée.");
+  };
+
+  const supprimerProduit = (id) => {
+    setProduits((liste) => liste.filter((p) => p.id !== id));
+    setAdminMessage("Produit supprimé.");
+  };
+
+  const toutesLesCommandes = useMemo(() => {
+    const deJeunes = comptesJeunes.flatMap((c) =>
+      (c.commandes || []).map((cmd) => ({ ...cmd, proprietaire: c.nom, matricule: c.matricule, type: "JEUNE" }))
+    );
+    const deResponsables = comptesResponsables.flatMap((c) =>
+      (c.commandes || []).map((cmd) => ({ ...cmd, proprietaire: c.nom, matricule: c.matricule, type: "RESPONSABLE" }))
+    );
+    return [...deJeunes, ...deResponsables].sort((a, b) => b.id - a.id);
+  }, [comptesJeunes, comptesResponsables]);
+
+  /* ------------------------------------------------------------------- */
+  /* Styles                                                                */
+  /* ------------------------------------------------------------------- */
+
+  const styles = {
+    app: { minHeight: "100vh", background: "linear-gradient(180deg, #ffffff 0%, #f8f7ff 100%)", color: "#111827", fontFamily: "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" },
+    header: { background: "#ffffff", borderBottom: "1px solid #e5e7eb", position: "sticky", top: 0, zIndex: 100 },
+    headerInner: { maxWidth: "1450px", margin: "0 auto", padding: "12px 28px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "25px", flexWrap: "wrap" },
+    brand: { display: "flex", alignItems: "center", gap: "13px", minWidth: 0 },
+    brandLogo: { width: "58px", height: "58px", objectFit: "contain", flexShrink: 0 },
+    brandTitle: { margin: 0, color: "#5420a8", fontSize: "26px", fontWeight: 900 },
+    brandSubtitle: { margin: "3px 0 0", color: "#64748b", fontSize: "12px" },
+    nav: { display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "5px", flexWrap: "wrap" },
+    navButton: (active) => ({ border: "none", borderRadius: "10px", padding: "11px 14px", background: active ? "#2456d8" : "transparent", color: active ? "#ffffff" : "#172033", fontSize: "13px", fontWeight: 850, cursor: "pointer", transition: "all .2s ease" }),
+    announcement: { background: "linear-gradient(90deg, #4e2096, #6428c7)", color: "#ffffff", display: "flex", minHeight: "48px" },
+    announcementTitle: { background: "#2456d8", padding: "0 24px", display: "flex", alignItems: "center", fontWeight: 900, fontSize: "14px", whiteSpace: "nowrap" },
+    announcementText: { flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "10px 18px", fontSize: "14px", fontWeight: 700, textAlign: "center" },
+    main: { maxWidth: "1450px", margin: "0 auto", padding: "50px 28px 80px" },
+    hero: { position: "relative", overflow: "hidden", display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(340px, .95fr)", alignItems: "center", gap: "50px", minHeight: "580px", marginBottom: "70px", borderRadius: "32px", padding: "40px" },
+    heroBackgroundLayer: (url, actif) => ({ position: "absolute", inset: 0, backgroundImage: `linear-gradient(180deg, rgba(15,10,35,.72), rgba(15,10,35,.86)), url(${url})`, backgroundSize: "cover", backgroundPosition: "center", opacity: actif ? 1 : 0, transition: "opacity 1.8s ease-in-out", zIndex: 0 }),
+    heroContent: { position: "relative", zIndex: 1 },
+    badge: { display: "inline-flex", padding: "8px 15px", borderRadius: "999px", background: "rgba(241,234,255,.15)", border: "1px solid rgba(223,208,255,.35)", color: "#e9d8ff", fontWeight: 850, fontSize: "13px", marginBottom: "20px" },
+    heroTitle: { margin: 0, color: "#ffffff", fontSize: "clamp(38px, 5vw, 68px)", lineHeight: 1.02, letterSpacing: "-2.5px", fontWeight: 950 },
+    purple: { color: "#c9a8ff" },
+    heroText: { maxWidth: "660px", margin: "24px 0", color: "rgba(255,255,255,.82)", fontSize: "17px", lineHeight: 1.7 },
+    heroActions: { display: "flex", gap: "12px", flexWrap: "wrap" },
+    button: { border: "none", borderRadius: "11px", padding: "13px 19px", background: "#2456d8", color: "#ffffff", fontWeight: 800, fontSize: "14px", cursor: "pointer", boxShadow: "0 10px 24px rgba(37,86,216,.18)" },
+    secondaryButton: { border: "1px solid #d8c7ff", borderRadius: "11px", padding: "12px 19px", background: "#ffffff", color: "#5420a8", fontWeight: 800, fontSize: "14px", cursor: "pointer" },
+    dangerButton: { border: "1px solid #fecaca", borderRadius: "11px", padding: "10px 16px", background: "#fff", color: "#b91c1c", fontWeight: 800, fontSize: "13px", cursor: "pointer" },
+    heroCard: { position: "relative", zIndex: 1, animation: "heroFloat 7s ease-in-out infinite", minHeight: "500px", borderRadius: "32px", padding: "36px 28px", background: "linear-gradient(145deg, #5420a8 0%, #702bd0 50%, #2456d8 100%)", color: "#ffffff", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", textAlign: "center", overflow: "hidden", boxShadow: "0 30px 70px rgba(79,32,150,.22)" },
+    heroLogoCircle: { animation: "logoFloat 4.5s ease-in-out infinite", width: "210px", height: "210px", borderRadius: "50%", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px", boxSizing: "border-box", boxShadow: "0 20px 45px rgba(0,0,0,.18)", marginBottom: "26px" },
+    heroLogo: { width: "100%", height: "100%", objectFit: "contain" },
+    heroCardText: { maxWidth: "480px", margin: 0, fontSize: "24px", lineHeight: 1.25, fontWeight: 850 },
+    heroMission: { marginTop: "16px", color: "#fde047", fontSize: "17px", fontWeight: 900 },
+    section: { marginBottom: "64px" },
+    sectionHeader: { maxWidth: "800px", marginBottom: "28px" },
+    sectionTitle: { margin: 0, color: "#172554", fontSize: "clamp(26px, 3.6vw, 40px)", fontWeight: 900, letterSpacing: "-1px" },
+    sectionText: { color: "#64748b", fontSize: "16px", lineHeight: 1.7, margin: "9px 0 0" },
+    cards: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "16px" },
+    card: { background: "#ffffff", border: "1px solid #e8e3f3", borderRadius: "20px", padding: "24px", boxShadow: "0 12px 35px rgba(30,41,59,.055)" },
+    cardTitle: { margin: "0 0 8px", color: "#172554", fontSize: "18px", fontWeight: 850 },
+    cardText: { margin: "0 0 16px", color: "#64748b", lineHeight: 1.6, fontSize: "14px" },
+    adminBox: { background: "#ffffff", borderRadius: "24px", border: "1px solid #e3d8f8", padding: "28px", boxShadow: "0 20px 55px rgba(76,29,149,.07)" },
+    input: { width: "100%", boxSizing: "border-box", padding: "12px 14px", border: "1px solid #d4d9e5", borderRadius: "10px", fontSize: "14px", marginTop: "6px", marginBottom: "14px", outline: "none", fontFamily: "inherit", background: "#fff" },
+    label: { display: "block", color: "#334155", fontSize: "13px", fontWeight: 750, marginBottom: "2px" },
+    tableWrapper: { overflowX: "auto" },
+    table: { width: "100%", minWidth: "700px", borderCollapse: "collapse", marginTop: "14px" },
+    th: { textAlign: "left", padding: "12px", background: "#f1efff", color: "#312e81", borderBottom: "1px solid #ddd6fe", fontSize: "12px" },
+    td: { padding: "12px", borderBottom: "1px solid #e8e8ef", color: "#475569", fontSize: "13px" },
+    footer: { background: "#151a35", color: "#ffffff", textAlign: "center", padding: "45px 24px" },
+    footerLogo: { width: "70px", height: "70px", objectFit: "contain", background: "#ffffff", borderRadius: "50%", padding: "5px", marginBottom: "12px" },
+    espaceCard: (couleur) => ({ background: "#ffffff", border: `1px solid ${couleur}33`, borderRadius: "22px", padding: "28px", boxShadow: "0 16px 40px rgba(30,41,59,.06)", display: "flex", flexDirection: "column", gap: "12px" }),
+    espaceIcone: (couleur) => ({ width: "54px", height: "54px", borderRadius: "15px", background: `${couleur}1f`, display: "grid", placeItems: "center", fontSize: "24px", marginBottom: "2px" }),
+    espaceBadge: (couleur) => ({ display: "inline-block", alignSelf: "flex-start", padding: "5px 11px", borderRadius: "999px", background: `${couleur}1a`, color: couleur, fontSize: "11px", fontWeight: 900, letterSpacing: ".4px" }),
+    tabBar: { display: "flex", gap: "7px", flexWrap: "wrap", marginBottom: "20px" },
+    profilPhoto: { width: "84px", height: "84px", borderRadius: "50%", objectFit: "cover", border: "4px solid #f1eaff" },
+    statutPill: (couleur) => ({ display: "inline-block", padding: "3px 10px", borderRadius: "999px", background: `${couleur}1a`, color: couleur, fontSize: "11px", fontWeight: 800 }),
+  };
+
+  const couleurStatut = (statut) => {
+    if (statut === "VALIDÉE" || statut === "PAYÉE" || statut === "CONFIRMÉE" || statut === "ACCEPTÉE") return "#16a34a";
+    if (statut === "REFUSÉE" || statut === "DÉCLINÉE") return "#dc2626";
+    return "#ca8a04";
+  };
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Accueil                                                       */
+  /* ------------------------------------------------------------------- */
+
+  const renderAccueil = () => (
+    <>
+      <section style={styles.hero}>
+        {heroBackgrounds.map((url, i) => (
+          <div key={url} style={styles.heroBackgroundLayer(url, i === indexFond)} />
+        ))}
+
+        <div style={styles.heroContent}>
+          <div style={styles.badge}>PLATEFORME OFFICIELLE JADCI</div>
+          <h1 className="reveal reveal-delay-1" style={styles.heroTitle}>
+            Ensemble pour
+            <br />
+            une <span className="gradient-text" style={styles.purple}>jeunesse engagée</span>
+          </h1>
+          <p className="reveal reveal-delay-2" style={styles.heroText}>
+            Bienvenue sur la plateforme numérique de la Jeunesse des Assemblées de Dieu de Côte d'Ivoire. Un espace institutionnel pour connecter, accompagner et servir la jeunesse.
+          </p>
+          <div className="reveal reveal-delay-3" style={styles.heroActions}>
+            <button style={styles.button} onClick={() => aller("espaces")}>REJOINDRE MON ESPACE</button>
+            <button style={styles.secondaryButton} onClick={() => aller("boutique")}>DÉCOUVRIR LA BOUTIQUE</button>
+          </div>
+        </div>
+
+        <div style={styles.heroCard}>
+          <span className="hero-orbit hero-orbit-1" />
+          <span className="hero-orbit hero-orbit-2" />
+          <span className="hero-spark spark-1" />
+          <span className="hero-spark spark-2" />
+          <span className="hero-spark spark-3" />
+          <div style={styles.heroLogoCircle}>
+            <img src={logoJadci} alt="Logo JADCI" style={styles.heroLogo} />
+          </div>
+          <p style={styles.heroCardText}>
+            JEUNESSE DES ASSEMBLÉES
+            <br />
+            DE DIEU DE CÔTE D'IVOIRE
+          </p>
+          <div style={styles.heroMission}>FOI • SERVICE • MISSION</div>
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>UNE PLATEFORME AU SERVICE DE LA JEUNESSE</h2>
+          <p style={styles.sectionText}>Retrouvez les principaux services de la JADCI en un même endroit.</p>
+        </div>
+        <div style={styles.cards}>
+          {[
+            ["🟨 ESPACE JEUNES", "Compte, matricule, profil, requêtes, commandes et reçus.", "espaces"],
+            ["🟩 ESPACE RESPONSABLES", "Compte, projets, candidatures, rapports et convocations.", "espaces"],
+            ["📰 ACTUALITÉS", "Publications, directs, prédications et vie de la jeunesse.", "actualites"],
+            ["🛍️ BOUTIQUE", "Livres, vêtements, gadgets et carte jeune JADCI.", "boutique"],
+          ].map(([titre, texte, destination]) => (
+            <div className="interactive-card reveal-card" style={styles.card} key={titre}>
+              <h3 style={styles.cardTitle}>{titre}</h3>
+              <p style={styles.cardText}>{texte}</p>
+              <button style={styles.button} onClick={() => aller(destination)}>CONSULTER</button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div className="home-media-strip">
+          <div>
+            <span className="live-badge">● ANNUAIRE</span>
+            <h2 style={{ margin: "14px 0 8px", color: "#fff", fontSize: "clamp(26px, 3.6vw, 40px)" }}>
+              Trouver une église JADCI près de chez toi
+            </h2>
+            <p style={{ margin: 0, color: "rgba(255,255,255,.78)", lineHeight: 1.7, maxWidth: "700px" }}>
+              Consulte les assemblées enregistrées et validées par l'administration, partout en Côte d'Ivoire.
+            </p>
+          </div>
+          <button type="button" style={styles.button} onClick={() => aller("eglises")}>VOIR LES ÉGLISES</button>
+        </div>
+      </section>
+    </>
+  );
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Actualités                                                    */
+  /* ------------------------------------------------------------------- */
+
+  const renderActualites = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <span className="live-badge">● ACTUALITÉS JADCI</span>
+          <h2 style={styles.sectionTitle}>PUBLICATIONS, DIRECTS & PROGRAMMES</h2>
+          <p style={styles.sectionText}>Les communications officielles, articles, vidéos et documents de la jeunesse.</p>
+        </div>
+
+        <div style={styles.mediaHeroLike || {}}>
+          <div
+            style={{
+              position: "relative",
+              overflow: "hidden",
+              borderRadius: "28px",
+              padding: "45px 38px",
+              background: "linear-gradient(135deg, #17133b 0%, #5420a8 52%, #2456d8 100%)",
+              minHeight: "220px",
+            }}
+          >
+            <span className={direct.actif ? "live-badge live-now" : "live-badge"}>{direct.actif ? "● EN DIRECT" : "○ DIRECT À VENIR"}</span>
+            <h3 style={{ margin: "16px 0 8px", fontSize: "clamp(24px, 3.4vw, 38px)", color: "#fff" }}>{direct.titre}</h3>
+            <p style={{ margin: "0 0 18px", color: "rgba(255,255,255,.82)", fontSize: "15px", lineHeight: 1.7, maxWidth: "640px" }}>{direct.sousTitre}</p>
+            <button type="button" style={styles.button} onClick={() => window.open(direct.url, "_blank", "noopener,noreferrer")}>
+              {direct.actif ? "REGARDER LE DIRECT" : "OUVRIR LA CHAÎNE JADCI"}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h3 style={styles.sectionTitle}>DERNIÈRES PUBLICATIONS</h3>
+        </div>
+        <div style={styles.cards}>
+          {articles.map((article) => (
+            <article className="interactive-card" style={styles.card} key={article.id}>
+              {article.image && <img src={article.image} alt="" style={{ width: "100%", height: "180px", objectFit: "cover", borderRadius: "14px", marginBottom: "14px" }} />}
+              <div style={{ color: "#64748b", fontSize: "12px", fontWeight: 800 }}>
+                {article.categorie} • {article.datePublication}
+                {article.dateEvenement ? ` • PROGRAMME : ${article.dateEvenement}` : ""}
+              </div>
+              <h3 style={styles.cardTitle}>{article.titre}</h3>
+              <p style={styles.cardText}>{article.contenu}</p>
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {article.videoUrl && (
+                  <button type="button" style={styles.secondaryButton} onClick={() => window.open(article.videoUrl, "_blank", "noopener,noreferrer")}>▶ VIDÉO</button>
+                )}
+                {article.documentUrl && (
+                  <button type="button" style={styles.secondaryButton} onClick={() => window.open(article.documentUrl, "_blank", "noopener,noreferrer")}>📄 DOCUMENT</button>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.homeMediaStrip}>
+          <div>
+            <span className="live-badge">● SOLIDARITÉ</span>
+            <h3 style={{ margin: "14px 0 8px", color: "#fff", fontSize: "clamp(26px, 3.6vw, 38px)" }}>Soutenir un projet JADCI</h3>
+            <p style={{ margin: 0, color: "rgba(255,255,255,.78)", lineHeight: 1.7 }}>
+              Le soutien libre aux projets communautaires de la jeunesse.
+            </p>
+          </div>
+        </div>
+        <div style={{ ...styles.cards, marginTop: "20px" }}>
+          {projetsCommunautaires.filter((p) => p.actif).map((p) => {
+            const objectif = Number(p.objectif) || 0;
+            const collecte = Number(p.collecte) || 0;
+            const pct = objectif ? Math.min(100, Math.round((collecte / objectif) * 100)) : 0;
+            return (
+              <article className="interactive-card" style={styles.card} key={p.id}>
+                {p.image && <img src={p.image} alt="" style={{ width: "100%", height: "160px", objectFit: "cover", borderRadius: "14px" }} />}
+                <h3 style={styles.cardTitle}>{p.titre}</h3>
+                <p style={styles.cardText}>{p.description}</p>
+                <div style={{ height: "8px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" }}>
+                  <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#5420a8,#2456d8)" }} />
+                </div>
+                <p style={{ color: "#475569", fontWeight: 800, fontSize: "13px", marginTop: "8px" }}>
+                  {collecte.toLocaleString("fr-FR")} / {objectif.toLocaleString("fr-FR")} FCFA
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.card}>
+          <span className="live-badge">★ JEUNE LEADER DU MOIS</span>
+          <div style={{ display: "flex", gap: "20px", alignItems: "center", flexWrap: "wrap", marginTop: "16px" }}>
+            {leaderMois.photo ? (
+              <img src={leaderMois.photo} alt={leaderMois.nom} style={{ width: "130px", height: "130px", objectFit: "cover", borderRadius: "50%", border: "6px solid #f1eaff" }} />
+            ) : (
+              <div style={{ width: "130px", height: "130px", borderRadius: "50%", display: "grid", placeItems: "center", background: "linear-gradient(135deg,#5420a8,#2456d8)", color: "#fff", fontSize: "40px" }}>★</div>
+            )}
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <h3 style={{ ...styles.sectionTitle, fontSize: "28px" }}>{leaderMois.nom}</h3>
+              <p style={styles.sectionText}>{leaderMois.presentation}</p>
+              <strong style={{ color: "#5420a8" }}>{leaderMois.mois}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Boutique                                                      */
+  /* ------------------------------------------------------------------- */
+
+  const renderBoutique = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>BOUTIQUE JADCI</h2>
+          <p style={styles.sectionText}>Commande tes produits ; le paiement se fait ensuite depuis ton espace personnel.</p>
+        </div>
+        <div style={styles.cards}>
+          {produits.map((produit) => (
+            <div style={styles.card} key={produit.id}>
+              <div style={{ height: "120px", borderRadius: "15px", background: "linear-gradient(135deg, #f1eaff, #e7edff)", display: "flex", alignItems: "center", justifyContent: "center", color: "#5420a8", fontWeight: 900, marginBottom: "16px" }}>
+                {produit.categorie}
+              </div>
+              <h3 style={styles.cardTitle}>{produit.nom}</h3>
+              <p style={styles.cardText}>{produit.description}</p>
+              <div style={{ color: "#f59e0b", fontWeight: 900, marginBottom: "8px", fontSize: "13px" }}>
+                {"★".repeat(Math.round(produit.appreciation || 0))} <span style={{ color: "#64748b", fontWeight: 700 }}>({produit.stock ?? 0} en stock)</span>
+              </div>
+              <strong style={{ display: "block", color: "#2456d8", fontSize: "19px", marginBottom: "14px" }}>{produit.prix.toLocaleString("fr-FR")} FCFA</strong>
+              <button
+                type="button"
+                disabled={(produit.stock ?? 0) === 0}
+                style={{ ...styles.button, opacity: (produit.stock ?? 0) === 0 ? 0.5 : 1, cursor: (produit.stock ?? 0) === 0 ? "not-allowed" : "pointer" }}
+                onClick={() => ajouterAuPanier(produit)}
+              >
+                {(produit.stock ?? 0) === 0 ? "RUPTURE DE STOCK" : "AJOUTER AU PANIER"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.adminBox}>
+          <h3 style={styles.cardTitle}>MON PANIER</h3>
+          {panier.length === 0 ? (
+            <p style={styles.sectionText}>Aucun produit dans le panier.</p>
+          ) : (
+            <>
+              {panier.map((item) => (
+                <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "14px", padding: "13px 0", borderBottom: "1px solid #e5e7eb", flexWrap: "wrap" }}>
+                  <div>
+                    <strong>{item.nom}</strong>
+                    <div style={{ color: "#64748b", marginTop: "4px", fontSize: "13px" }}>{item.prix.toLocaleString("fr-FR")} FCFA</div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <button type="button" style={styles.secondaryButton} onClick={() => modifierQuantite(item.id, -1)}>-</button>
+                    <strong>{item.quantite}</strong>
+                    <button type="button" style={styles.secondaryButton} onClick={() => modifierQuantite(item.id, 1)}>+</button>
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "14px", marginTop: "18px", fontSize: "19px", fontWeight: 900 }}>
+                <span>TOTAL</span>
+                <span>{totalPanier.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+              <button type="button" style={{ ...styles.button, marginTop: "18px" }} onClick={passerCommande}>
+                VALIDER LA COMMANDE
+              </button>
+            </>
+          )}
+          {commandeMessage && <p style={{ marginTop: "16px", color: "#334155", fontWeight: 700, fontSize: "14px" }}>{commandeMessage}</p>}
+          {!proprietaireConnecte && (
+            <p style={{ marginTop: "10px", color: "#ca8a04", fontWeight: 700, fontSize: "13px" }}>
+              Connecte-toi depuis « ESPACES » pour que ta commande soit rattachée à ton profil.
+            </p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Églises (accessible hors menu principal)                     */
+  /* ------------------------------------------------------------------- */
+
+  const renderEglises = () => (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>ANNUAIRE DES ÉGLISES</h2>
+        <p style={styles.sectionText}>Assemblées enregistrées et validées par l'administration JADCI.</p>
+      </div>
+      <input
+        style={{ ...styles.input, maxWidth: "620px" }}
+        value={rechercheEglise}
+        onChange={(e) => setRechercheEglise(e.target.value)}
+        placeholder="Rechercher une église, une ville, une commune..."
+      />
+      {eglisesFiltrees.length === 0 ? (
+        <div style={styles.card}><p style={styles.cardText}>Aucune église ne correspond à ta recherche.</p></div>
+      ) : (
+        <div style={styles.cards}>
+          {eglisesFiltrees.map((eglise) => (
+            <div style={styles.card} key={eglise.id}>
+              <h3 style={styles.cardTitle}>{eglise.nom}</h3>
+              <p style={styles.cardText}>
+                <strong>Pasteur :</strong> {eglise.pasteur}<br />
+                <strong>Ville :</strong> {eglise.ville}<br />
+                <strong>Commune :</strong> {eglise.commune || "—"}
+              </p>
+              <button
+                type="button"
+                style={styles.secondaryButton}
+                onClick={() => {
+                  const url = eglise.localisation || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${eglise.nom} ${eglise.ville}`)}`;
+                  window.open(url, "_blank", "noopener,noreferrer");
+                }}
+              >
+                VOIR SUR GOOGLE MAPS
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Espaces (choix)                                               */
+  /* ------------------------------------------------------------------- */
+
+  const renderEspaces = () => (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>ESPACES JADCI</h2>
+        <p style={styles.sectionText}>Un compte = un espace personnel. Choisis ton profil pour commencer.</p>
+      </div>
+      <div style={styles.cards}>
+        <div style={styles.espaceCard("#ca8a04")}>
+          <div style={styles.espaceIcone("#ca8a04")}>🟨</div>
+          <span style={styles.espaceBadge("#ca8a04")}>ESPACE JEUNES</span>
+          <h3 style={styles.cardTitle}>{jeuneConnecte ? `Bonjour ${jeuneConnecte.nom.split(" ")[0]}` : "Mon bureau personnel"}</h3>
+          <p style={styles.cardText}>Requêtes, projets, commandes, reçus et infos qui te concernent.</p>
+          {jeuneConnecte ? (
+            <button type="button" style={styles.button} onClick={() => aller("espace-jeune")}>OUVRIR MON ESPACE</button>
+          ) : (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button type="button" style={styles.button} onClick={() => { setModeEspaceJeune("connexion"); aller("espace-jeune"); }}>SE CONNECTER</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => { setModeEspaceJeune("creation"); aller("espace-jeune"); }}>CRÉER UN COMPTE</button>
+            </div>
+          )}
+        </div>
+
+        <div style={styles.espaceCard("#16a34a")}>
+          <div style={styles.espaceIcone("#16a34a")}>🟩</div>
+          <span style={styles.espaceBadge("#16a34a")}>ESPACE RESPONSABLES</span>
+          <h3 style={styles.cardTitle}>{responsableConnecte ? `Bonjour ${responsableConnecte.nom.split(" ")[0]}` : "Mon bureau responsable"}</h3>
+          <p style={styles.cardText}>Projets, candidatures, rapports, convocations et églises.</p>
+          {responsableConnecte ? (
+            <button type="button" style={styles.button} onClick={() => aller("espace-responsable")}>OUVRIR MON ESPACE</button>
+          ) : (
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+              <button type="button" style={styles.button} onClick={() => { setModeEspaceResponsable("connexion"); aller("espace-responsable"); }}>SE CONNECTER</button>
+              <button type="button" style={styles.secondaryButton} onClick={() => { setModeEspaceResponsable("creation"); aller("espace-responsable"); }}>CRÉER UN COMPTE</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Espace Jeune                                                  */
+  /* ------------------------------------------------------------------- */
+
+  const renderFormulaireProfilCommun = (compte, majFn, champsSupplementaires) => (
+    <div style={styles.adminBox}>
+      <h3 style={styles.cardTitle}>MON PROFIL</h3>
+      <div style={{ display: "flex", gap: "18px", alignItems: "center", marginBottom: "18px", flexWrap: "wrap" }}>
+        {compte.photo ? <img src={compte.photo} alt="" style={styles.profilPhoto} /> : <div style={{ ...styles.profilPhoto, background: "#f1eaff", display: "grid", placeItems: "center", color: "#5420a8", fontSize: "28px", fontWeight: 900 }}>{compte.nom.charAt(0)}</div>}
+        <div>
+          <label style={styles.label}>PHOTO DE PROFIL</label>
+          <input type="file" accept="image/*" style={styles.input} onChange={async (e) => { const b64 = await lireFichierEnBase64(e.target.files?.[0]); majFn({ photo: b64 }); }} />
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+        <div><label style={styles.label}>DATE DE NAISSANCE</label><input type="date" style={styles.input} value={compte.dateNaissance || ""} onChange={(e) => majFn({ dateNaissance: e.target.value })} /></div>
+        <div><label style={styles.label}>TÉLÉPHONE</label><input style={styles.input} value={compte.telephone || ""} onChange={(e) => majFn({ telephone: e.target.value })} /></div>
+        <div><label style={styles.label}>E-MAIL</label><input style={styles.input} value={compte.email || ""} onChange={(e) => majFn({ email: e.target.value })} /></div>
+        <div><label style={styles.label}>ÉGLISE</label>
+          <select style={styles.input} value={compte.eglise || ""} onChange={(e) => majFn({ eglise: e.target.value })}>
+            <option value="">Sélectionner</option>
+            {eglisesValidees.map((e) => <option key={e.id} value={e.nom}>{e.nom}</option>)}
+          </select>
+        </div>
+        <div><label style={styles.label}>BAPTÊME D'EAU</label>
+          <select style={styles.input} value={compte.bapteme || ""} onChange={(e) => majFn({ bapteme: e.target.value })}>
+            <option value="">Sélectionner</option><option value="OUI">OUI</option><option value="NON">NON</option>
+          </select>
+        </div>
+        <div><label style={styles.label}>SITUATION MATRIMONIALE</label>
+          <select style={styles.input} value={compte.situationMatrimoniale || ""} onChange={(e) => majFn({ situationMatrimoniale: e.target.value })}>
+            <option value="">Sélectionner</option><option value="CÉLIBATAIRE">CÉLIBATAIRE</option><option value="MARIÉ(E)">MARIÉ(E)</option><option value="CONCUBINAGE">CONCUBINAGE</option>
+          </select>
+        </div>
+      </div>
+      {champsSupplementaires}
+    </div>
+  );
+
+  const renderCommandesEtRecus = (compte) => (
+    <div style={styles.adminBox}>
+      <h3 style={styles.cardTitle}>MES COMMANDES & REÇUS</h3>
+      {(compte.commandes || []).length === 0 ? (
+        <p style={styles.sectionText}>Aucune commande. Rends-toi dans la BOUTIQUE.</p>
+      ) : (
+        (compte.commandes || []).map((cmd) => (
+          <div key={cmd.id} style={{ padding: "13px 0", borderBottom: "1px solid #e5e7eb" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px", alignItems: "center" }}>
+              <strong>{cmd.date} — {cmd.total.toLocaleString("fr-FR")} FCFA</strong>
+              <span style={styles.statutPill(couleurStatut(cmd.statut))}>{cmd.statut}</span>
+            </div>
+            <div style={{ color: "#64748b", fontSize: "13px", margin: "6px 0" }}>{cmd.articles.map((a) => `${a.nom} x${a.quantite}`).join(", ")}</div>
+            {cmd.statut === "EN ATTENTE DE PAIEMENT" ? (
+              <button type="button" style={styles.button} onClick={() => payerCommande(cmd.id)}>CONFIRMER LE PAIEMENT (démo)</button>
+            ) : (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>Code reçu : <strong>{cmd.codeRecu}</strong></span>
+                <button type="button" style={styles.secondaryButton} onClick={() => genererRecuPDF(cmd, compte)}>TÉLÉCHARGER LE REÇU (PDF)</button>
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  const renderEspaceJeune = () => {
+    if (!jeuneConnecte) {
+      return (
+        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
+          <div style={styles.adminBox}>
+            <span style={styles.espaceBadge("#ca8a04")}>🟨 ESPACE JEUNES</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>{modeEspaceJeune === "connexion" ? "Se connecter" : "Créer un compte"}</h2>
+            <div style={{ display: "flex", gap: "8px", margin: "16px 0" }}>
+              <button type="button" style={modeEspaceJeune === "connexion" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceJeune("connexion"); setMessageEspaceJeune(""); }}>SE CONNECTER</button>
+              <button type="button" style={modeEspaceJeune === "creation" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceJeune("creation"); setMessageEspaceJeune(""); }}>CRÉER UN COMPTE</button>
+            </div>
+            {modeEspaceJeune === "connexion" ? (
+              <form onSubmit={connecterJeune}>
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={connexionJeune.email} onChange={(e) => setConnexionJeune((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={connexionJeune.motDePasse} onChange={(e) => setConnexionJeune((c) => ({ ...c, motDePasse: e.target.value }))} />
+                {messageEspaceJeune && <p style={{ color: "#b91c1c", fontWeight: 700, fontSize: "13px" }}>{messageEspaceJeune}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>SE CONNECTER</button>
+              </form>
+            ) : (
+              <form onSubmit={creerCompteJeune}>
+                <label style={styles.label}>NOM ET PRÉNOMS *</label>
+                <input required style={styles.input} value={inscriptionJeune.nom} onChange={(e) => setInscriptionJeune((c) => ({ ...c, nom: e.target.value }))} />
+                <label style={styles.label}>TÉLÉPHONE *</label>
+                <input required style={styles.input} value={inscriptionJeune.telephone} onChange={(e) => setInscriptionJeune((c) => ({ ...c, telephone: e.target.value }))} />
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={inscriptionJeune.email} onChange={(e) => setInscriptionJeune((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={inscriptionJeune.motDePasse} onChange={(e) => setInscriptionJeune((c) => ({ ...c, motDePasse: e.target.value }))} />
+                <label style={styles.label}>CONFIRMATION *</label>
+                <input type="password" required style={styles.input} value={inscriptionJeune.confirmation} onChange={(e) => setInscriptionJeune((c) => ({ ...c, confirmation: e.target.value }))} />
+                {messageEspaceJeune && <p style={{ color: "#b91c1c", fontWeight: 700, fontSize: "13px" }}>{messageEspaceJeune}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>CRÉER MON COMPTE</button>
+                <p style={{ ...styles.sectionText, fontSize: "12px", marginTop: "10px" }}>Un matricule JAD-XXXXXX te sera attribué automatiquement.</p>
+              </form>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    const onglets = [["bureau", "MON BUREAU"], ["profil", "MON PROFIL"], ["requetes", "MES REQUÊTES"], ["projets", "MES PROJETS"], ["commandes", "COMMANDES & REÇUS"]];
+
+    return (
+      <section style={styles.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px", marginBottom: "20px" }}>
+          <div>
+            <span style={styles.espaceBadge("#ca8a04")}>🟨 {jeuneConnecte.matricule}</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "8px" }}>{jeuneConnecte.nom}</h2>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={deconnecterJeune}>DÉCONNEXION</button>
+        </div>
+
+        <div style={styles.tabBar}>
+          {onglets.map(([id, label]) => (
+            <button key={id} type="button" style={ongletJeune === id ? styles.button : styles.secondaryButton} onClick={() => setOngletJeune(id)}>{label}</button>
+          ))}
+        </div>
+
+        {ongletJeune === "bureau" && (
+          <div style={styles.cards}>
+            <div style={styles.card}><h3 style={styles.cardTitle}>MATRICULE</h3><strong style={{ fontSize: "22px", color: "#2456d8" }}>{jeuneConnecte.matricule}</strong></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>REQUÊTES</h3><strong style={{ fontSize: "30px", color: "#2456d8" }}>{(jeuneConnecte.requetes || []).length}</strong></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>PROJETS SOUMIS</h3><strong style={{ fontSize: "30px", color: "#2456d8" }}>{(jeuneConnecte.projets || []).length}</strong></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>COMMANDES</h3><strong style={{ fontSize: "30px", color: "#2456d8" }}>{(jeuneConnecte.commandes || []).length}</strong></div>
+            <div style={{ ...styles.card, gridColumn: "1 / -1" }}>
+              <h3 style={styles.cardTitle}>ACTUALITÉS RÉCENTES</h3>
+              {articles.slice(0, 3).map((a) => <p key={a.id} style={styles.cardText}>• {a.titre}</p>)}
+            </div>
+          </div>
+        )}
+
+        {ongletJeune === "profil" && renderFormulaireProfilCommun(jeuneConnecte, majProfilJeune, (
+          <div style={{ marginTop: "10px" }}>
+            <label style={styles.label}>MON CV</label>
+            {jeuneConnecte.cvNom && <p style={{ ...styles.sectionText, fontSize: "13px" }}>Fichier actuel : {jeuneConnecte.cvNom}</p>}
+            <input type="file" accept=".pdf,.doc,.docx" style={styles.input} onChange={async (e) => { const f = e.target.files?.[0]; const b64 = await lireFichierEnBase64(f); majProfilJeune({ cvNom: f?.name || "", cvData: b64 }); }} />
+          </div>
+        ))}
+
+        {ongletJeune === "requetes" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>NOUVELLE REQUÊTE</h3>
+            <form onSubmit={soumettreRequeteJeune}>
+              <textarea name="requete" required placeholder="Décris ta requête..." style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>ENVOYER</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(jeuneConnecte.requetes || []).length === 0 ? <p style={styles.sectionText}>Aucune requête envoyée.</p> : (jeuneConnecte.requetes || []).map((r) => (
+                <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ margin: 0 }}>{r.texte}</p>
+                  <span style={styles.statutPill(couleurStatut(r.statut))}>{r.statut}</span> <span style={{ color: "#64748b", fontSize: "12px" }}>{r.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletJeune === "projets" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>SOUMETTRE UN PROJET</h3>
+            <form onSubmit={soumettreProjetJeune}>
+              <label style={styles.label}>TITRE *</label>
+              <input name="titre" required style={styles.input} />
+              <label style={styles.label}>DESCRIPTION</label>
+              <textarea name="description" style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>SOUMETTRE</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(jeuneConnecte.projets || []).length === 0 ? <p style={styles.sectionText}>Aucun projet soumis.</p> : (jeuneConnecte.projets || []).map((p) => (
+                <div key={p.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{p.titre}</strong>
+                  <p style={{ margin: "4px 0", color: "#64748b", fontSize: "13px" }}>{p.description}</p>
+                  <span style={styles.statutPill(couleurStatut(p.statut))}>{p.statut}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletJeune === "commandes" && renderCommandesEtRecus(jeuneConnecte)}
+      </section>
+    );
+  };
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Espace Responsable                                           */
+  /* ------------------------------------------------------------------- */
+
+  const renderEspaceResponsable = () => {
+    if (!responsableConnecte) {
+      return (
+        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
+          <div style={styles.adminBox}>
+            <span style={styles.espaceBadge("#16a34a")}>🟩 ESPACE RESPONSABLES</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>{modeEspaceResponsable === "connexion" ? "Se connecter" : "Créer un compte"}</h2>
+            <div style={{ display: "flex", gap: "8px", margin: "16px 0" }}>
+              <button type="button" style={modeEspaceResponsable === "connexion" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceResponsable("connexion"); setMessageEspaceResponsable(""); }}>SE CONNECTER</button>
+              <button type="button" style={modeEspaceResponsable === "creation" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceResponsable("creation"); setMessageEspaceResponsable(""); }}>CRÉER UN COMPTE</button>
+            </div>
+            {modeEspaceResponsable === "connexion" ? (
+              <form onSubmit={connecterResponsable}>
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={connexionResponsable.email} onChange={(e) => setConnexionResponsable((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={connexionResponsable.motDePasse} onChange={(e) => setConnexionResponsable((c) => ({ ...c, motDePasse: e.target.value }))} />
+                {messageEspaceResponsable && <p style={{ color: "#b91c1c", fontWeight: 700, fontSize: "13px" }}>{messageEspaceResponsable}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>SE CONNECTER</button>
+              </form>
+            ) : (
+              <form onSubmit={creerCompteResponsable}>
+                <label style={styles.label}>NOM ET PRÉNOMS *</label>
+                <input required style={styles.input} value={inscriptionResponsable.nom} onChange={(e) => setInscriptionResponsable((c) => ({ ...c, nom: e.target.value }))} />
+                <label style={styles.label}>TÉLÉPHONE *</label>
+                <input required style={styles.input} value={inscriptionResponsable.telephone} onChange={(e) => setInscriptionResponsable((c) => ({ ...c, telephone: e.target.value }))} />
+                <label style={styles.label}>E-MAIL *</label>
+                <input type="email" required style={styles.input} value={inscriptionResponsable.email} onChange={(e) => setInscriptionResponsable((c) => ({ ...c, email: e.target.value }))} />
+                <label style={styles.label}>MOT DE PASSE *</label>
+                <input type="password" required style={styles.input} value={inscriptionResponsable.motDePasse} onChange={(e) => setInscriptionResponsable((c) => ({ ...c, motDePasse: e.target.value }))} />
+                <label style={styles.label}>CONFIRMATION *</label>
+                <input type="password" required style={styles.input} value={inscriptionResponsable.confirmation} onChange={(e) => setInscriptionResponsable((c) => ({ ...c, confirmation: e.target.value }))} />
+                {messageEspaceResponsable && <p style={{ color: "#b91c1c", fontWeight: 700, fontSize: "13px" }}>{messageEspaceResponsable}</p>}
+                <button type="submit" style={{ ...styles.button, width: "100%" }}>CRÉER MON COMPTE</button>
+                <p style={{ ...styles.sectionText, fontSize: "12px", marginTop: "10px" }}>Un matricule RR-XXXXXX te sera attribué automatiquement.</p>
+              </form>
+            )}
+          </div>
+        </section>
+      );
+    }
+
+    const onglets = [
+      ["bureau", "MON BUREAU"], ["profil", "MON PROFIL"], ["requetes", "REQUÊTES"], ["projets", "PROJETS"],
+      ["eglise", "ENREGISTRER UNE ÉGLISE"], ["candidature", "CANDIDATURE"], ["recommandations", "RECOMMANDATIONS"],
+      ["rapports", "RAPPORTS"], ["convocations", "CONVOCATIONS"], ["commandes", "COMMANDES & REÇUS"],
+    ];
+
+    const mesEglises = eglises.filter((e) => e.responsableId === responsableConnecte.id);
+
+    return (
+      <section style={styles.section}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px", marginBottom: "20px" }}>
+          <div>
+            <span style={styles.espaceBadge("#16a34a")}>🟩 {responsableConnecte.matricule}</span>
+            <h2 style={{ ...styles.sectionTitle, marginTop: "8px" }}>{responsableConnecte.nom}</h2>
+          </div>
+          <button type="button" style={styles.secondaryButton} onClick={deconnecterResponsable}>DÉCONNEXION</button>
+        </div>
+
+        <div style={styles.tabBar}>
+          {onglets.map(([id, label]) => (
+            <button key={id} type="button" style={ongletResponsable === id ? styles.button : styles.secondaryButton} onClick={() => setOngletResponsable(id)}>{label}</button>
+          ))}
+        </div>
+
+        {ongletResponsable === "bureau" && (
+          <div style={styles.cards}>
+            <div style={styles.card}><h3 style={styles.cardTitle}>MATRICULE</h3><strong style={{ fontSize: "22px", color: "#2456d8" }}>{responsableConnecte.matricule}</strong></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>ÉGLISES ENREGISTRÉES</h3><strong style={{ fontSize: "30px", color: "#2456d8" }}>{mesEglises.length}</strong></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>PROJETS SOUMIS</h3><strong style={{ fontSize: "30px", color: "#2456d8" }}>{(responsableConnecte.projets || []).length}</strong></div>
+            <div style={styles.card}><h3 style={styles.cardTitle}>RAPPORTS</h3><strong style={{ fontSize: "30px", color: "#2456d8" }}>{(responsableConnecte.rapports || []).length}</strong></div>
+          </div>
+        )}
+
+        {ongletResponsable === "profil" && renderFormulaireProfilCommun(responsableConnecte, majProfilResponsable, null)}
+
+        {ongletResponsable === "requetes" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>NOUVELLE REQUÊTE</h3>
+            <form onSubmit={soumettreRequeteResponsable}>
+              <textarea name="requete" required placeholder="Décris ta requête..." style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>ENVOYER</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(responsableConnecte.requetes || []).length === 0 ? <p style={styles.sectionText}>Aucune requête envoyée.</p> : (responsableConnecte.requetes || []).map((r) => (
+                <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <p style={{ margin: 0 }}>{r.texte}</p>
+                  <span style={styles.statutPill(couleurStatut(r.statut))}>{r.statut}</span> <span style={{ color: "#64748b", fontSize: "12px" }}>{r.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletResponsable === "projets" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>SOUMETTRE UN PROJET</h3>
+            <form onSubmit={soumettreProjetResponsable}>
+              <label style={styles.label}>TITRE *</label>
+              <input name="titre" required style={styles.input} />
+              <label style={styles.label}>DESCRIPTION</label>
+              <textarea name="description" style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>SOUMETTRE</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(responsableConnecte.projets || []).length === 0 ? <p style={styles.sectionText}>Aucun projet soumis.</p> : (responsableConnecte.projets || []).map((p) => (
+                <div key={p.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{p.titre}</strong>
+                  <p style={{ margin: "4px 0", color: "#64748b", fontSize: "13px" }}>{p.description}</p>
+                  <span style={styles.statutPill(couleurStatut(p.statut))}>{p.statut}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletResponsable === "eglise" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>ENREGISTRER UNE ÉGLISE</h3>
+            <form onSubmit={enregistrerEglise}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                <div><label style={styles.label}>NOM DE L'ÉGLISE *</label><input name="nom" required style={styles.input} /></div>
+                <div><label style={styles.label}>NOM DU PASTEUR *</label><input name="pasteur" required style={styles.input} /></div>
+                <div><label style={styles.label}>TÉLÉPHONE</label><input name="telephone" style={styles.input} /></div>
+                <div><label style={styles.label}>VILLE *</label><input name="ville" required style={styles.input} /></div>
+                <div><label style={styles.label}>COMMUNE</label><input name="commune" style={styles.input} /></div>
+                <div><label style={styles.label}>QUARTIER</label><input name="quartier" style={styles.input} /></div>
+                <div><label style={styles.label}>LIEN GOOGLE MAPS</label><input name="localisation" style={styles.input} /></div>
+              </div>
+              <button type="submit" style={styles.button}>SOUMETTRE L'ÉGLISE</button>
+            </form>
+            <div style={{ marginTop: "20px" }}>
+              <h4 style={{ ...styles.cardTitle, fontSize: "15px" }}>MES ÉGLISES SOUMISES</h4>
+              {mesEglises.length === 0 ? <p style={styles.sectionText}>Aucune église soumise.</p> : mesEglises.map((e) => (
+                <div key={e.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                  <span>{e.nom} — {e.ville}</span>
+                  <span style={styles.statutPill(couleurStatut(e.statut))}>{e.statut}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletResponsable === "candidature" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>SOUMETTRE UNE CANDIDATURE</h3>
+            <form onSubmit={soumettreCandidature}>
+              <label style={styles.label}>POSTE / RESPONSABILITÉ VISÉE *</label>
+              <input name="poste" required style={styles.input} />
+              <label style={styles.label}>MOTIVATION</label>
+              <textarea name="motivation" style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>ENVOYER MA CANDIDATURE</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(responsableConnecte.candidatures || []).map((c) => (
+                <div key={c.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{c.poste}</strong> <span style={styles.statutPill(couleurStatut(c.statut))}>{c.statut}</span>
+                  <p style={{ margin: "4px 0", color: "#64748b", fontSize: "13px" }}>{c.motivation}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletResponsable === "recommandations" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>FAIRE UNE RECOMMANDATION</h3>
+            <form onSubmit={soumettreRecommandation}>
+              <label style={styles.label}>PERSONNE RECOMMANDÉE *</label>
+              <input name="personne" required style={styles.input} />
+              <label style={styles.label}>MOTIF</label>
+              <textarea name="motif" style={{ ...styles.input, minHeight: "80px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>ENVOYER</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(responsableConnecte.recommandations || []).map((r) => (
+                <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{r.personne}</strong>
+                  <p style={{ margin: "4px 0", color: "#64748b", fontSize: "13px" }}>{r.motif}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletResponsable === "rapports" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>TRANSMETTRE UN RAPPORT</h3>
+            <form onSubmit={soumettreRapport}>
+              <label style={styles.label}>TITRE *</label>
+              <input name="titre" required style={styles.input} />
+              <label style={styles.label}>CONTENU</label>
+              <textarea name="contenu" style={{ ...styles.input, minHeight: "110px", resize: "vertical" }} />
+              <button type="submit" style={styles.button}>TRANSMETTRE</button>
+            </form>
+            <div style={{ marginTop: "18px" }}>
+              {(responsableConnecte.rapports || []).map((r) => (
+                <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{r.titre}</strong>
+                  <p style={{ margin: "4px 0", color: "#64748b", fontSize: "13px" }}>{r.contenu}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {ongletResponsable === "convocations" && (
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>CONVOCATIONS</h3>
+            {convocations.length === 0 ? <p style={styles.sectionText}>Aucune convocation publiée.</p> : convocations.map((conv) => {
+              const maReponse = (responsableConnecte.reponsesConvocations || []).find((r) => r.convocationId === conv.id);
+              return (
+                <div key={conv.id} style={{ padding: "14px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <strong>{conv.titre}</strong> <span style={{ color: "#64748b", fontSize: "12px" }}>{conv.date}</span>
+                  <p style={{ margin: "6px 0", color: "#64748b", fontSize: "13px" }}>{conv.description}</p>
+                  {!maReponse ? (
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <button type="button" style={styles.button} onClick={() => repondreConvocation(conv.id, "ACCEPTÉE", "")}>ACCEPTER</button>
+                      <button type="button" style={styles.dangerButton} onClick={() => repondreConvocation(conv.id, "DÉCLINÉE", "")}>DÉCLINER</button>
+                    </div>
+                  ) : (
+                    <div>
+                      <span style={styles.statutPill(couleurStatut(maReponse.statut))}>{maReponse.statut}</span>
+                      {conv.participationActivee && maReponse.statut === "ACCEPTÉE" && (
+                        <div style={{ marginTop: "8px" }}>
+                          <span style={{ fontSize: "13px", color: "#334155" }}>Participation demandée : {conv.montantParticipation.toLocaleString("fr-FR")} FCFA — </span>
+                          {maReponse.participationStatut ? (
+                            <span style={styles.statutPill(couleurStatut(maReponse.participationStatut))}>{maReponse.participationStatut}</span>
+                          ) : (
+                            <button type="button" style={styles.secondaryButton} onClick={() => signalerParticipationPayee(maReponse.id)}>SIGNALER LE PAIEMENT</button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {ongletResponsable === "commandes" && renderCommandesEtRecus(responsableConnecte)}
+      </section>
+    );
+  };
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu : Portail d'administration                                     */
+  /* ------------------------------------------------------------------- */
+
+  const renderAdmin = () => {
+    if (!adminSession) {
+      return (
+        <section style={{ ...styles.section, maxWidth: "480px", margin: "10px auto 70px" }}>
+          <div style={styles.adminBox}>
+            <div style={{ textAlign: "center", marginBottom: "20px" }}>
+              <img src={logoJadci} alt="Logo JADCI" style={{ width: "90px", height: "90px", objectFit: "contain" }} />
+            </div>
+            <h2 style={styles.sectionTitle}>PORTAIL D'ADMINISTRATION</h2>
+            <p style={styles.sectionText}>Accès réservé à l'administration générale, marketing et communication.</p>
+            <label style={styles.label}>MATRICULE ADMINISTRATEUR</label>
+            <input style={styles.input} value={matriculeAdmin} onChange={(e) => { setMatriculeAdmin(e.target.value); if (erreurAdmin) setErreurAdmin(""); }} />
+            <label style={styles.label}>MOT DE PASSE</label>
+            <input type="password" style={styles.input} value={motDePasseAdmin} onChange={(e) => { setMotDePasseAdmin(e.target.value); if (erreurAdmin) setErreurAdmin(""); }} onKeyDown={(e) => { if (e.key === "Enter") connecterAdmin(); }} />
+            {erreurAdmin && <p style={{ color: "#b91c1c", fontWeight: 700, fontSize: "13px" }}>{erreurAdmin}</p>}
+            <button style={{ ...styles.button, width: "100%" }} onClick={connecterAdmin}>SE CONNECTER</button>
+          </div>
+        </section>
+      );
+    }
+
+    const role = adminSession.role;
+    const onglets = [["dashboard", "VUE D'ENSEMBLE"]];
+    if (role === "GENERAL") onglets.push(["jeunes", "JEUNES"], ["responsables", "RESPONSABLES"], ["eglises", "ÉGLISES"], ["convocations", "CONVOCATIONS"], ["produits", "BOUTIQUE"], ["commandes", "COMMANDES & PAIEMENTS"], ["actualites", "ACTUALITÉS & ANNONCES"], ["exports", "EXPORTS EXCEL"]);
+    if (role === "MARKETING") onglets.push(["produits", "BOUTIQUE"], ["commandes", "COMMANDES & PAIEMENTS"]);
+    if (role === "COM") onglets.push(["actualites", "ACTUALITÉS & ANNONCES"], ["validations", "VALIDATIONS"]);
+
+    return (
+      <>
+        <section style={styles.section}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
+            <div>
+              <span style={styles.espaceBadge("#334155")}>👤 {adminSession.label}</span>
+              <h2 style={{ ...styles.sectionTitle, marginTop: "8px" }}>Portail d'administration</h2>
+            </div>
+            <button type="button" style={styles.secondaryButton} onClick={deconnecterAdmin}>DÉCONNEXION</button>
+          </div>
+
+          <div style={styles.tabBar}>
+            {onglets.map(([id, label]) => (
+              <button key={id} type="button" style={adminTab === id ? styles.button : styles.secondaryButton} onClick={() => setAdminTab(id)}>{label}</button>
+            ))}
+          </div>
+
+          {adminMessage && <div className="admin-success" style={{ marginBottom: "18px" }}>{adminMessage}</div>}
+
+          {adminTab === "dashboard" && (
+            <div style={styles.cards}>
+              <div style={styles.card}><h3 style={styles.cardTitle}>JEUNES</h3><strong style={{ fontSize: "32px", color: "#2456d8" }}>{comptesJeunes.length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>RESPONSABLES</h3><strong style={{ fontSize: "32px", color: "#2456d8" }}>{comptesResponsables.length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>ÉGLISES EN ATTENTE</h3><strong style={{ fontSize: "32px", color: "#2456d8" }}>{eglises.filter((e) => e.statut === "EN ATTENTE").length}</strong></div>
+              <div style={styles.card}><h3 style={styles.cardTitle}>COMMANDES PAYÉES</h3><strong style={{ fontSize: "32px", color: "#2456d8" }}>{toutesLesCommandes.filter((c) => c.statut === "PAYÉE").length}</strong></div>
+            </div>
+          )}
+
+          {adminTab === "jeunes" && role === "GENERAL" && (
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead><tr>{["MATRICULE", "NOM", "TÉLÉPHONE", "ÉGLISE", "REQUÊTES", "PROJETS"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {comptesJeunes.map((c) => (
+                    <tr key={c.id}>
+                      <td style={styles.td}>{c.matricule}</td><td style={styles.td}>{c.nom}</td><td style={styles.td}>{c.telephone}</td>
+                      <td style={styles.td}>{c.eglise || "—"}</td><td style={styles.td}>{(c.requetes || []).length}</td><td style={styles.td}>{(c.projets || []).length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {adminTab === "responsables" && role === "GENERAL" && (
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead><tr>{["MATRICULE", "NOM", "TÉLÉPHONE", "ÉGLISE", "CANDIDATURES", "RAPPORTS"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {comptesResponsables.map((c) => (
+                    <tr key={c.id}>
+                      <td style={styles.td}>{c.matricule}</td><td style={styles.td}>{c.nom}</td><td style={styles.td}>{c.telephone}</td>
+                      <td style={styles.td}>{c.eglise || "—"}</td><td style={styles.td}>{(c.candidatures || []).length}</td><td style={styles.td}>{(c.rapports || []).length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {adminTab === "eglises" && role === "GENERAL" && (
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead><tr>{["ÉGLISE", "PASTEUR", "VILLE", "STATUT", "ACTIONS"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {eglises.map((e) => (
+                    <tr key={e.id}>
+                      <td style={styles.td}>{e.nom}</td><td style={styles.td}>{e.pasteur}</td><td style={styles.td}>{e.ville}</td>
+                      <td style={styles.td}><span style={styles.statutPill(couleurStatut(e.statut))}>{e.statut}</span></td>
+                      <td style={styles.td}>
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                          <button type="button" style={styles.button} onClick={() => validerEglise(e.id, "VALIDÉE")}>VALIDER</button>
+                          <button type="button" style={styles.dangerButton} onClick={() => validerEglise(e.id, "REFUSÉE")}>REJETER</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {adminTab === "convocations" && role === "GENERAL" && (
+            <div>
+              <h3 style={styles.cardTitle}>PUBLIER UNE CONVOCATION</h3>
+              <form onSubmit={creerConvocation}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                  <div><label style={styles.label}>TITRE *</label><input name="titre" required style={styles.input} /></div>
+                  <div><label style={styles.label}>DATE</label><input name="date" type="date" style={styles.input} /></div>
+                  <div><label style={styles.label}>MONTANT PARTICIPATION (FCFA)</label><input name="montantParticipation" type="number" min="0" style={styles.input} /></div>
+                </div>
+                <label style={styles.label}>DESCRIPTION</label>
+                <textarea name="description" style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
+                <label style={{ ...styles.label, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <input type="checkbox" name="participationActivee" /> Activer la participation payante
+                </label>
+                <button type="submit" style={styles.button}>PUBLIER</button>
+              </form>
+              <div style={{ marginTop: "20px" }}>
+                {convocations.map((conv) => (
+                  <div key={conv.id} style={{ padding: "12px 0", borderBottom: "1px solid #e5e7eb" }}>
+                    <strong>{conv.titre}</strong> <span style={{ color: "#64748b", fontSize: "12px" }}>{conv.date}</span>
+                    {conv.participationActivee && (
+                      <div style={{ marginTop: "8px" }}>
+                        {comptesResponsables.map((r) =>
+                          (r.reponsesConvocations || []).filter((rep) => rep.convocationId === conv.id && rep.participationStatut === "SIGNALÉE").map((rep) => (
+                            <div key={rep.id} style={{ fontSize: "13px", display: "flex", justifyContent: "space-between", gap: "8px", padding: "6px 0" }}>
+                              <span>{r.nom} ({r.matricule}) a signalé un paiement</span>
+                              <button type="button" style={styles.secondaryButton} onClick={() => confirmerParticipation(r.id, rep.id)}>CONFIRMER</button>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {adminTab === "produits" && (role === "GENERAL" || role === "MARKETING") && (
+            <div>
+              <h3 style={styles.cardTitle}>GESTION DE LA BOUTIQUE</h3>
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead><tr>{["PRODUIT", "CATÉGORIE", "PRIX", "STOCK", "ACTIONS"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
+                  <tbody>
+                    {produits.map((p) => (
+                      <tr key={p.id}>
+                        <td style={styles.td}>{p.nom}</td><td style={styles.td}>{p.categorie}</td>
+                        <td style={styles.td}>{p.prix.toLocaleString("fr-FR")} FCFA</td><td style={styles.td}>{p.stock}</td>
+                        <td style={styles.td}><button type="button" style={styles.dangerButton} onClick={() => supprimerProduit(p.id)}>SUPPRIMER</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {adminTab === "commandes" && (role === "GENERAL" || role === "MARKETING") && (
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead><tr>{["CLIENT", "MATRICULE", "TOTAL", "STATUT", "CODE REÇU", "DATE"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {toutesLesCommandes.map((c) => (
+                    <tr key={c.id}>
+                      <td style={styles.td}>{c.proprietaire}</td><td style={styles.td}>{c.matricule}</td>
+                      <td style={styles.td}>{c.total.toLocaleString("fr-FR")} FCFA</td>
+                      <td style={styles.td}><span style={styles.statutPill(couleurStatut(c.statut))}>{c.statut}</span></td>
+                      <td style={styles.td}>{c.codeRecu || "—"}</td><td style={styles.td}>{c.date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {adminTab === "actualites" && (role === "GENERAL" || role === "COM") && (
+            <div>
+              <h3 style={styles.cardTitle}>BANDEAU D'ANNONCES</h3>
+              <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                <input style={{ ...styles.input, marginBottom: 0 }} value={nouvelleAnnonce} onChange={(e) => setNouvelleAnnonce(e.target.value)} placeholder="Nouvelle annonce..." />
+                <button type="button" style={styles.button} onClick={publierAnnonce}>PUBLIER</button>
+              </div>
+              {annonces.map((texte, i) => (
+                <div key={`${texte}-${i}`} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #e5e7eb" }}>
+                  <span style={{ fontSize: "13px" }}>{texte}</span>
+                  <button type="button" style={styles.dangerButton} onClick={() => supprimerAnnonce(i)}>SUPPRIMER</button>
+                </div>
+              ))}
+
+              <h3 style={{ ...styles.cardTitle, marginTop: "26px" }}>NOUVEL ARTICLE</h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const form = new FormData(e.target);
+                  const titre = (form.get("titre") || "").toString().trim();
+                  if (!titre) return;
+                  setArticles((liste) => [
+                    {
+                      id: Date.now(),
+                      titre,
+                      contenu: (form.get("contenu") || "").toString().trim(),
+                      image: (form.get("image") || "").toString().trim(),
+                      videoUrl: (form.get("videoUrl") || "").toString().trim(),
+                      documentUrl: (form.get("documentUrl") || "").toString().trim(),
+                      datePublication: new Date().toISOString().slice(0, 10),
+                      dateEvenement: (form.get("dateEvenement") || "").toString(),
+                      categorie: (form.get("categorie") || "ACTUALITÉ").toString(),
+                    },
+                    ...liste,
+                  ]);
+                  e.target.reset();
+                  setAdminMessage("Article publié.");
+                }}
+              >
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
+                  <div><label style={styles.label}>TITRE *</label><input name="titre" required style={styles.input} /></div>
+                  <div><label style={styles.label}>CATÉGORIE</label><input name="categorie" style={styles.input} /></div>
+                  <div><label style={styles.label}>IMAGE (URL)</label><input name="image" style={styles.input} /></div>
+                  <div><label style={styles.label}>VIDÉO (URL)</label><input name="videoUrl" style={styles.input} /></div>
+                  <div><label style={styles.label}>DOCUMENT (URL)</label><input name="documentUrl" style={styles.input} /></div>
+                  <div><label style={styles.label}>DATE DU PROGRAMME</label><input name="dateEvenement" type="date" style={styles.input} /></div>
+                </div>
+                <label style={styles.label}>CONTENU *</label>
+                <textarea name="contenu" required style={{ ...styles.input, minHeight: "120px", resize: "vertical" }} />
+                <button type="submit" style={styles.button}>PUBLIER L'ARTICLE</button>
+              </form>
+            </div>
+          )}
+
+          {adminTab === "validations" && role === "COM" && (
+            <div>
+              <h3 style={styles.cardTitle}>REQUÊTES EN ATTENTE</h3>
+              {comptesJeunes.flatMap((c) => (c.requetes || []).filter((r) => r.statut === "EN ATTENTE").map((r) => ({ ...r, compte: c, type: "jeune" })))
+                .concat(comptesResponsables.flatMap((c) => (c.requetes || []).filter((r) => r.statut === "EN ATTENTE").map((r) => ({ ...r, compte: c, type: "responsable" }))))
+                .map((r) => (
+                  <div key={`${r.type}-${r.id}`} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb", display: "flex", justifyContent: "space-between", gap: "10px", flexWrap: "wrap" }}>
+                    <div><strong>{r.compte.nom}</strong> ({r.compte.matricule}) — {r.texte}</div>
+                    <button
+                      type="button"
+                      style={styles.button}
+                      onClick={() => {
+                        const setter = r.type === "jeune" ? setComptesJeunes : setComptesResponsables;
+                        setter((liste) => liste.map((c) => (c.id === r.compte.id ? { ...c, requetes: (c.requetes || []).map((x) => (x.id === r.id ? { ...x, statut: "VALIDÉE" } : x)) } : c)));
+                      }}
+                    >
+                      VALIDER
+                    </button>
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {adminTab === "exports" && role === "GENERAL" && (
+            <div style={styles.cards}>
+              {[
+                ["Jeunes", comptesJeunes.map((c) => ({ Matricule: c.matricule, Nom: c.nom, Téléphone: c.telephone, Email: c.email, Église: c.eglise, "Créé le": c.creeLe }))],
+                ["Responsables", comptesResponsables.map((c) => ({ Matricule: c.matricule, Nom: c.nom, Téléphone: c.telephone, Email: c.email, Église: c.eglise, "Créé le": c.creeLe }))],
+                ["Églises", eglises.map((e) => ({ Nom: e.nom, Pasteur: e.pasteur, Ville: e.ville, Statut: e.statut }))],
+                ["Commandes", toutesLesCommandes.map((c) => ({ Client: c.proprietaire, Matricule: c.matricule, Total: c.total, Statut: c.statut, "Code reçu": c.codeRecu, Date: c.date }))],
+                ["Requêtes", [...comptesJeunes, ...comptesResponsables].flatMap((c) => (c.requetes || []).map((r) => ({ Matricule: c.matricule, Nom: c.nom, Requête: r.texte, Statut: r.statut, Date: r.date })))],
+                ["Projets soumis", [...comptesJeunes, ...comptesResponsables].flatMap((c) => (c.projets || []).map((p) => ({ Matricule: c.matricule, Nom: c.nom, Titre: p.titre, Statut: p.statut, Date: p.date })))],
+                ["Candidatures", comptesResponsables.flatMap((c) => (c.candidatures || []).map((x) => ({ Matricule: c.matricule, Nom: c.nom, Poste: x.poste, Statut: x.statut, Date: x.date })))],
+                ["Rapports", comptesResponsables.flatMap((c) => (c.rapports || []).map((x) => ({ Matricule: c.matricule, Nom: c.nom, Titre: x.titre, Date: x.date })))],
+              ].map(([label, donnees]) => (
+                <div style={styles.card} key={label}>
+                  <h3 style={styles.cardTitle}>{label}</h3>
+                  <p style={styles.cardText}>{donnees.length} entrée(s)</p>
+                  <button type="button" style={styles.button} onClick={() => exporterExcel(donnees, label, `jadci-${label.toLowerCase().replace(/\s+/g, "-")}`)}>
+                    EXPORTER EN EXCEL
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </>
+    );
+  };
+
+  /* ------------------------------------------------------------------- */
+  /* Rendu principal                                                       */
+  /* ------------------------------------------------------------------- */
+
+  const navItems = [
+    ["accueil", "ACCUEIL"],
+    ["actualites", "ACTUALITÉS"],
+    ["boutique", "BOUTIQUE"],
+    ["espaces", "ESPACES"],
+    ["admin", "PORTAIL D'ADMINISTRATION"],
+  ];
+
+  return (
+    <div style={styles.app}>
+      <style>{`
+        .admin-success { padding: 12px 16px; border-radius: 12px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; font-weight: 800; font-size: 13px; }
+        @keyframes heroFloat { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(.35deg); } }
+        @keyframes logoFloat { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-13px) scale(1.025); } }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes shine { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+        @keyframes orbit { from { transform: rotate(0deg) translateX(175px) rotate(0deg); } to { transform: rotate(360deg) translateX(175px) rotate(-360deg); } }
+        @keyframes orbitReverse { from { transform: rotate(360deg) translateX(220px) rotate(-360deg); } to { transform: rotate(0deg) translateX(220px) rotate(0deg); } }
+        @keyframes sparkle { 0%, 100% { opacity: .25; transform: scale(.65); } 50% { opacity: 1; transform: scale(1.25); } }
+        @keyframes missionPulse { 0%, 100% { text-shadow: 0 0 0 rgba(253,224,71,0); } 50% { text-shadow: 0 0 22px rgba(253,224,71,.5); } }
+        .reveal { animation: fadeUp .8s cubic-bezier(.2,.8,.2,1) both; }
+        .reveal-delay-1 { animation-delay: .08s; } .reveal-delay-2 { animation-delay: .18s; } .reveal-delay-3 { animation-delay: .28s; }
+        .gradient-text { background: linear-gradient(90deg, #6428c7, #8b5cf6, #2456d8, #6428c7); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: shine 4s linear infinite; }
+        .interactive-card { transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease; will-change: transform; }
+        .interactive-card:hover { transform: translateY(-9px); border-color: #c4b5fd; box-shadow: 0 24px 55px rgba(76,29,149,.13) !important; }
+        .hero-orbit { position: absolute; left: 50%; top: 46%; width: 10px; height: 10px; margin: -5px; border-radius: 50%; background: rgba(255,255,255,.9); box-shadow: 0 0 18px rgba(255,255,255,.8); pointer-events: none; }
+        .hero-orbit-1 { animation: orbit 9s linear infinite; }
+        .hero-orbit-2 { width: 7px; height: 7px; animation: orbitReverse 12s linear infinite; opacity: .8; }
+        .hero-spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: #fde047; box-shadow: 0 0 20px rgba(253,224,71,.9); animation: sparkle 2.8s ease-in-out infinite; pointer-events: none; }
+        .spark-1 { top: 18%; left: 16%; animation-delay: .2s; } .spark-2 { top: 27%; right: 15%; animation-delay: .9s; } .spark-3 { bottom: 18%; left: 20%; animation-delay: 1.5s; }
+        .live-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,.13); color: #fde047; border: 1px solid rgba(255,255,255,.18); font-size: 12px; font-weight: 900; letter-spacing: .5px; }
+        .live-now { animation: missionPulse 1.7s ease-in-out infinite; }
+        .home-media-strip { border-radius: 26px; padding: 32px; display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; background: linear-gradient(120deg, #5420a8, #2456d8); box-shadow: 0 20px 50px rgba(79,32,150,.16); }
+        @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; } }
+      `}</style>
+
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <div style={styles.brand}>
+            <img src={logoJadci} alt="Logo JADCI" style={styles.brandLogo} />
+            <div>
+              <h1 style={styles.brandTitle}>JADCI</h1>
+              <p style={styles.brandSubtitle}>Jeunesse des Assemblées de Dieu de Côte d'Ivoire</p>
+            </div>
+          </div>
+          <nav style={styles.nav} aria-label="Navigation principale">
+            {navItems.map(([destination, label]) => (
+              <button type="button" key={destination} style={styles.navButton(page === destination)} onClick={() => aller(destination)}>
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <div style={styles.announcement}>
+        <div style={styles.announcementTitle}>ANNONCE</div>
+        <div style={styles.announcementText}>{annonces[annonceActive] || "Bienvenue sur la plateforme officielle JADCI."}</div>
+      </div>
+
+      <main style={styles.main}>
+        {page === "accueil" && renderAccueil()}
+        {page === "actualites" && renderActualites()}
+        {page === "boutique" && renderBoutique()}
+        {page === "espaces" && renderEspaces()}
+        {page === "espace-jeune" && renderEspaceJeune()}
+        {page === "espace-responsable" && renderEspaceResponsable()}
+        {page === "admin" && renderAdmin()}
+        {page === "eglises" && renderEglises()}
+      </main>
+
+      <footer style={styles.footer}>
+        <img src={logoJadci} alt="Logo JADCI" style={styles.footerLogo} />
+        <h3 style={{ margin: "0 0 8px", fontSize: "22px" }}>JADCI</h3>
+        <p style={{ margin: "0 0 8px", opacity: 0.85 }}>JEUNESSE DES ASSEMBLÉES DE DIEU DE CÔTE D'IVOIRE</p>
+        <strong style={{ color: "#fde047" }}>FOI • SERVICE • MISSION</strong>
+        <p style={{ marginTop: "20px", opacity: 0.5, fontSize: "12px" }}>Plateforme JADCI — Version de développement</p>
+      </footer>
+    </div>
+  );
+}
+
+export default App;

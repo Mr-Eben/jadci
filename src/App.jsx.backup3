@@ -1,0 +1,1633 @@
+import { useMemo, useState } from "react";
+import logoJadci from "./assets/logo-jadci.png";
+import "./App.css";
+
+const demandesInitiales = [
+  {
+    id: 1,
+    type: "JEUNE",
+    nom: "Kouassi Jean",
+    telephone: "07 00 00 00 00",
+    ville: "Abidjan",
+    statut: "EN ATTENTE",
+  },
+  {
+    id: 2,
+    type: "RESPONSABLE RÉGIONAL",
+    nom: "Yao Marie",
+    telephone: "05 00 00 00 00",
+    ville: "Bouaké",
+    statut: "EN ATTENTE",
+  },
+];
+
+const eglisesInitiales = [
+  {
+    id: 1,
+    nom: "AD Temple de la Grâce",
+    pasteur: "Pasteur responsable",
+    ville: "Abidjan",
+    commune: "Cocody",
+    quartier: "Riviera",
+    localisation: "",
+  },
+  {
+    id: 2,
+    nom: "AD Temple de la Gloire",
+    pasteur: "Pasteur responsable",
+    ville: "Abidjan",
+    commune: "Yopougon",
+    quartier: "Selmer",
+    localisation: "",
+  },
+  {
+    id: 3,
+    nom: "AD Temple de la Victoire",
+    pasteur: "Pasteur responsable",
+    ville: "Bouaké",
+    commune: "Bouaké",
+    quartier: "Centre",
+    localisation: "",
+  },
+];
+
+const produitsInitiaux = [
+  {
+    id: 1,
+    nom: "Livre évangélique",
+    categorie: "LIVRES",
+    prix: 5000,
+    description: "Ressource chrétienne disponible dans la boutique JADCI.",
+  },
+  {
+    id: 2,
+    nom: "Vêtement JADCI",
+    categorie: "VÊTEMENTS",
+    prix: 10000,
+    description: "Vêtement officiel JADCI.",
+  },
+  {
+    id: 3,
+    nom: "Gadget JADCI",
+    categorie: "GADGETS",
+    prix: 5000,
+    description: "Accessoire JADCI.",
+  },
+  {
+    id: 4,
+    nom: "Carte Jeune JADCI",
+    categorie: "SERVICES",
+    prix: 1000,
+    description: "Carte physique Jeune JADCI.",
+  },
+];
+
+const inscriptionInitiale = {
+  nom: "",
+  telephone: "",
+  email: "",
+  ville: "",
+  commune: "",
+  quartier: "",
+  statutSocial: "",
+  statutMatrimonial: "",
+  sexe: "",
+  eglise: "",
+  departement: "",
+  responsabilite: "",
+  motDePasse: "",
+  cv: null,
+  photo: null,
+};
+
+const nouvelleEgliseInitiale = {
+  nom: "",
+  pasteur: "",
+  ville: "",
+  commune: "",
+  quartier: "",
+  localisation: "",
+};
+
+function App() {
+  const [page, setPage] = useState("accueil");
+  const [adminConnecte, setAdminConnecte] = useState(false);
+  const [motDePasse, setMotDePasse] = useState("");
+  const [erreur, setErreur] = useState("");
+
+  const [demandes, setDemandes] = useState(demandesInitiales);
+  const [annonce, setAnnonce] = useState("");
+  const [annonces, setAnnonces] = useState([
+    "Bienvenue sur la plateforme officielle JADCI.",
+    "Les inscriptions des jeunes et responsables régionaux sont ouvertes.",
+    "Carte Jeune JADCI : 1 000 FCFA.",
+  ]);
+
+  const [eglises, setEglises] = useState(eglisesInitiales);
+  const [rechercheEglise, setRechercheEglise] = useState("");
+
+  const [produits] = useState(produitsInitiaux);
+  const [panier, setPanier] = useState([]);
+
+  const [typeInscription, setTypeInscription] = useState("JEUNE");
+  const [inscription, setInscription] = useState(inscriptionInitiale);
+  const [inscriptionMessage, setInscriptionMessage] = useState("");
+
+  const [nouvelleEglise, setNouvelleEglise] = useState(
+    nouvelleEgliseInitiale
+  );
+
+  const [commandeMessage, setCommandeMessage] = useState("");
+
+  const navItems = [
+    ["accueil", "ACCUEIL"],
+    ["portail", "PORTAIL"],
+    ["utilisateurs", "UTILISATEURS"],
+    ["eglises", "ÉGLISES"],
+    ["boutique", "BOUTIQUE"],
+    ["annonces", "ANNONCES"],
+  ];
+
+  const aller = (destination) => {
+    setPage(destination);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const connexionAdmin = () => {
+    if (motDePasse === "") {
+      setAdminConnecte(true);
+      setErreur("");
+      setMotDePasse("");
+    } else {
+      setErreur("Mot de passe administrateur incorrect.");
+    }
+  };
+
+  const traiterDemande = (id, nouveauStatut) => {
+    setDemandes((liste) =>
+      liste.map((demande) =>
+        demande.id === id
+          ? { ...demande, statut: nouveauStatut }
+          : demande
+      )
+    );
+  };
+
+  const publierAnnonce = () => {
+    const texte = annonce.trim();
+    if (!texte) return;
+
+    setAnnonces((liste) => [texte, ...liste]);
+    setAnnonce("");
+  };
+
+  const genererMatricule = (nom) => {
+    const premierNom = nom.trim().split(/\s+/).filter(Boolean)[0];
+    const initiale = premierNom
+      ? premierNom.substring(0, 3).toUpperCase()
+      : "JAD";
+    const nombre = Math.floor(10000 + Math.random() * 90000);
+
+    return `${initiale}${nombre}`;
+  };
+
+  const modifierInscription = (champ, valeur) => {
+    setInscription((ancienne) => ({
+      ...ancienne,
+      [champ]: valeur,
+    }));
+  };
+
+  const soumettreInscription = (event) => {
+    event.preventDefault();
+
+    if (
+      !inscription.nom.trim() ||
+      !inscription.telephone.trim() ||
+      !inscription.email.trim() ||
+      !inscription.ville.trim() ||
+      !inscription.motDePasse.trim()
+    ) {
+      setInscriptionMessage("Veuillez remplir les champs obligatoires.");
+      return;
+    }
+
+    const matricule = genererMatricule(inscription.nom);
+
+    const nouvelleDemande = {
+      id: Date.now(),
+      type: typeInscription,
+      nom: inscription.nom.trim(),
+      telephone: inscription.telephone.trim(),
+      ville: inscription.ville.trim(),
+      statut: "EN ATTENTE",
+      matricule,
+    };
+
+    setDemandes((liste) => [nouvelleDemande, ...liste]);
+
+    setInscriptionMessage(
+      `Votre demande a été enregistrée. Matricule provisoire : ${matricule}. La validation définitive sera effectuée par l'administration.`
+    );
+
+    setInscription(inscriptionInitiale);
+  };
+
+  const ajouterAuPanier = (produit) => {
+    setPanier((ancienPanier) => {
+      const existe = ancienPanier.find((item) => item.id === produit.id);
+
+      if (existe) {
+        return ancienPanier.map((item) =>
+          item.id === produit.id
+            ? { ...item, quantite: item.quantite + 1 }
+            : item
+        );
+      }
+
+      return [...ancienPanier, { ...produit, quantite: 1 }];
+    });
+
+    setCommandeMessage(`${produit.nom} a été ajouté à votre commande.`);
+  };
+
+  const modifierQuantite = (id, variation) => {
+    setPanier((ancienPanier) =>
+      ancienPanier
+        .map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                quantite: Math.max(0, item.quantite + variation),
+              }
+            : item
+        )
+        .filter((item) => item.quantite > 0)
+    );
+  };
+
+  const totalPanier = useMemo(
+    () =>
+      panier.reduce(
+        (total, item) => total + item.prix * item.quantite,
+        0
+      ),
+    [panier]
+  );
+
+  const confirmerCommande = () => {
+    if (panier.length === 0) {
+      setCommandeMessage("Votre commande est vide.");
+      return;
+    }
+
+    setCommandeMessage(
+      `Commande enregistrée pour un montant de ${totalPanier.toLocaleString(
+        "fr-FR"
+      )} FCFA. Le traitement de la commande sera effectué par l'administration.`
+    );
+
+    setPanier([]);
+  };
+
+  const ajouterEglise = (event) => {
+    event.preventDefault();
+
+    if (
+      !nouvelleEglise.nom.trim() ||
+      !nouvelleEglise.pasteur.trim() ||
+      !nouvelleEglise.ville.trim()
+    ) {
+      return;
+    }
+
+    setEglises((liste) => [
+      ...liste,
+      {
+        id: Date.now(),
+        ...nouvelleEglise,
+        nom: nouvelleEglise.nom.trim(),
+        pasteur: nouvelleEglise.pasteur.trim(),
+        ville: nouvelleEglise.ville.trim(),
+      },
+    ]);
+
+    setNouvelleEglise(nouvelleEgliseInitiale);
+  };
+
+  const eglisesFiltrees = eglises.filter((eglise) => {
+    const recherche = rechercheEglise.toLowerCase().trim();
+
+    if (!recherche) return true;
+
+    return (
+      eglise.nom.toLowerCase().includes(recherche) ||
+      eglise.ville.toLowerCase().includes(recherche) ||
+      eglise.commune.toLowerCase().includes(recherche) ||
+      eglise.quartier.toLowerCase().includes(recherche) ||
+      eglise.pasteur.toLowerCase().includes(recherche)
+    );
+  });
+
+  const styles = {
+    app: {
+      minHeight: "100vh",
+      background: "linear-gradient(180deg, #ffffff 0%, #f8f7ff 100%)",
+      color: "#111827",
+      fontFamily:
+        "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    },
+    header: {
+      background: "#ffffff",
+      borderBottom: "1px solid #e5e7eb",
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
+    },
+    headerInner: {
+      maxWidth: "1450px",
+      margin: "0 auto",
+      padding: "12px 28px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: "25px",
+    },
+    brand: {
+      display: "flex",
+      alignItems: "center",
+      gap: "13px",
+      minWidth: 0,
+    },
+    brandLogo: {
+      width: "64px",
+      height: "64px",
+      objectFit: "contain",
+      flexShrink: 0,
+    },
+    brandTitle: {
+      margin: 0,
+      color: "#5420a8",
+      fontSize: "28px",
+      fontWeight: 900,
+    },
+    brandSubtitle: {
+      margin: "3px 0 0",
+      color: "#64748b",
+      fontSize: "13px",
+    },
+    nav: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: "5px",
+      flexWrap: "wrap",
+    },
+    navButton: (active) => ({
+      border: "none",
+      borderRadius: "10px",
+      padding: "12px 15px",
+      background: active ? "#2456d8" : "transparent",
+      color: active ? "#ffffff" : "#172033",
+      fontSize: "14px",
+      fontWeight: 850,
+      cursor: "pointer",
+      transition: "all .2s ease",
+    }),
+    announcement: {
+      background: "linear-gradient(90deg, #4e2096, #6428c7)",
+      color: "#ffffff",
+      display: "flex",
+      minHeight: "50px",
+    },
+    announcementTitle: {
+      background: "#2456d8",
+      padding: "0 30px",
+      display: "flex",
+      alignItems: "center",
+      fontWeight: 900,
+      fontSize: "15px",
+      whiteSpace: "nowrap",
+    },
+    announcementText: {
+      flex: 1,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "10px 20px",
+      fontSize: "15px",
+      fontWeight: 700,
+      textAlign: "center",
+    },
+    main: {
+      maxWidth: "1450px",
+      margin: "0 auto",
+      padding: "55px 32px 80px",
+    },
+    hero: {
+      display: "grid",
+      gridTemplateColumns: "minmax(0, 1.05fr) minmax(380px, .95fr)",
+      alignItems: "center",
+      gap: "60px",
+      minHeight: "620px",
+      marginBottom: "80px",
+    },
+    badge: {
+      display: "inline-flex",
+      padding: "9px 16px",
+      borderRadius: "999px",
+      background: "#f1eaff",
+      border: "1px solid #dfd0ff",
+      color: "#5420a8",
+      fontWeight: 850,
+      fontSize: "14px",
+      marginBottom: "22px",
+    },
+    heroTitle: {
+      margin: 0,
+      color: "#111827",
+      fontSize: "clamp(44px, 5.5vw, 76px)",
+      lineHeight: 1,
+      letterSpacing: "-3px",
+      fontWeight: 950,
+    },
+    purple: { color: "#6428c7" },
+    heroText: {
+      maxWidth: "700px",
+      margin: "28px 0",
+      color: "#60728b",
+      fontSize: "19px",
+      lineHeight: 1.7,
+    },
+    heroActions: {
+      display: "flex",
+      gap: "12px",
+      flexWrap: "wrap",
+    },
+    button: {
+      border: "none",
+      borderRadius: "11px",
+      padding: "14px 20px",
+      background: "#2456d8",
+      color: "#ffffff",
+      fontWeight: 800,
+      fontSize: "15px",
+      cursor: "pointer",
+      boxShadow: "0 10px 24px rgba(37,86,216,.18)",
+    },
+    secondaryButton: {
+      border: "1px solid #d8c7ff",
+      borderRadius: "11px",
+      padding: "13px 20px",
+      background: "#ffffff",
+      color: "#5420a8",
+      fontWeight: 800,
+      fontSize: "15px",
+      cursor: "pointer",
+    },
+    heroCard: {
+      minHeight: "530px",
+      borderRadius: "35px",
+      padding: "40px 30px",
+      background:
+        "linear-gradient(145deg, #5420a8 0%, #702bd0 50%, #2456d8 100%)",
+      color: "#ffffff",
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "center",
+      alignItems: "center",
+      textAlign: "center",
+      position: "relative",
+      overflow: "hidden",
+      boxShadow: "0 30px 70px rgba(79,32,150,.22)",
+    },
+    heroLogoCircle: {
+      width: "235px",
+      height: "235px",
+      borderRadius: "50%",
+      background: "#ffffff",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "17px",
+      boxSizing: "border-box",
+      boxShadow: "0 20px 45px rgba(0,0,0,.18)",
+      marginBottom: "30px",
+    },
+    heroLogo: {
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+    },
+    heroCardText: {
+      maxWidth: "500px",
+      margin: 0,
+      fontSize: "27px",
+      lineHeight: 1.25,
+      fontWeight: 850,
+    },
+    heroMission: {
+      marginTop: "18px",
+      color: "#fde047",
+      fontSize: "19px",
+      fontWeight: 900,
+    },
+    section: { marginBottom: "70px" },
+    sectionHeader: { maxWidth: "800px", marginBottom: "30px" },
+    sectionTitle: {
+      margin: 0,
+      color: "#172554",
+      fontSize: "clamp(28px, 4vw, 43px)",
+      fontWeight: 900,
+      letterSpacing: "-1px",
+    },
+    sectionText: {
+      color: "#64748b",
+      fontSize: "17px",
+      lineHeight: 1.7,
+      margin: "10px 0 0",
+    },
+    cards: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
+      gap: "18px",
+    },
+    card: {
+      background: "#ffffff",
+      border: "1px solid #e8e3f3",
+      borderRadius: "20px",
+      padding: "25px",
+      boxShadow: "0 12px 35px rgba(30,41,59,.055)",
+    },
+    cardTitle: {
+      margin: "0 0 9px",
+      color: "#172554",
+      fontSize: "19px",
+      fontWeight: 850,
+    },
+    cardText: {
+      margin: "0 0 18px",
+      color: "#64748b",
+      lineHeight: 1.6,
+    },
+    adminBox: {
+      background: "#ffffff",
+      borderRadius: "25px",
+      border: "1px solid #e3d8f8",
+      padding: "30px",
+      boxShadow: "0 20px 55px rgba(76,29,149,.07)",
+    },
+    input: {
+      width: "100%",
+      boxSizing: "border-box",
+      padding: "13px 15px",
+      border: "1px solid #d4d9e5",
+      borderRadius: "10px",
+      fontSize: "15px",
+      marginTop: "7px",
+      marginBottom: "15px",
+      outline: "none",
+      fontFamily: "inherit",
+      background: "#fff",
+    },
+    label: {
+      display: "block",
+      color: "#334155",
+      fontSize: "14px",
+      fontWeight: 750,
+      marginBottom: "3px",
+    },
+    tableWrapper: { overflowX: "auto" },
+    table: {
+      width: "100%",
+      minWidth: "750px",
+      borderCollapse: "collapse",
+      marginTop: "15px",
+    },
+    th: {
+      textAlign: "left",
+      padding: "13px",
+      background: "#f1efff",
+      color: "#312e81",
+      borderBottom: "1px solid #ddd6fe",
+      fontSize: "13px",
+    },
+    td: {
+      padding: "13px",
+      borderBottom: "1px solid #e8e8ef",
+      color: "#475569",
+      fontSize: "14px",
+    },
+    footer: {
+      background: "#151a35",
+      color: "#ffffff",
+      textAlign: "center",
+      padding: "50px 25px",
+    },
+    footerLogo: {
+      width: "75px",
+      height: "75px",
+      objectFit: "contain",
+      background: "#ffffff",
+      borderRadius: "50%",
+      padding: "5px",
+      marginBottom: "14px",
+    },
+  };
+
+  const renderAccueil = () => (
+    <>
+      <section style={styles.hero}>
+        <div>
+          <div style={styles.badge}>PLATEFORME OFFICIELLE JADCI</div>
+
+          <h1 style={styles.heroTitle}>
+            Ensemble pour
+            <br />
+            une <span style={styles.purple}>jeunesse engagée</span>
+          </h1>
+
+          <p style={styles.heroText}>
+            Bienvenue sur la plateforme numérique de la Jeunesse des
+            Assemblées de Dieu de Côte d’Ivoire. Un espace institutionnel
+            pour connecter, accompagner et servir la jeunesse.
+          </p>
+
+          <div style={styles.heroActions}>
+            <button style={styles.button} onClick={() => aller("portail")}>
+              ACCÉDER AU PORTAIL
+            </button>
+            <button
+              style={styles.secondaryButton}
+              onClick={() => aller("boutique")}
+            >
+              DÉCOUVRIR LA BOUTIQUE
+            </button>
+          </div>
+        </div>
+
+        <div style={styles.heroCard}>
+          <div style={styles.heroLogoCircle}>
+            <img src={logoJadci} alt="Logo JADCI" style={styles.heroLogo} />
+          </div>
+
+          <p style={styles.heroCardText}>
+            JEUNESSE DES ASSEMBLÉES
+            <br />
+            DE DIEU DE CÔTE D’IVOIRE
+          </p>
+
+          <div style={styles.heroMission}>FOI • SERVICE • MISSION</div>
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>
+            UNE PLATEFORME AU SERVICE DE LA JEUNESSE
+          </h2>
+          <p style={styles.sectionText}>
+            Retrouvez les principaux services de la JADCI dans un même
+            espace.
+          </p>
+        </div>
+
+        <div style={styles.cards}>
+          {[
+            [
+              "ESPACE JEUNE",
+              "Inscription, profil, matricule, CV, photo et carte jeune JADCI.",
+              "utilisateurs",
+            ],
+            [
+              "RESPONSABLES RÉGIONAUX",
+              "Gestion des églises, projets, propositions et informations régionales.",
+              "utilisateurs",
+            ],
+            [
+              "ÉGLISES",
+              "Consultez les églises enregistrées et recherchez une assemblée.",
+              "eglises",
+            ],
+            [
+              "BOUTIQUE JADCI",
+              "Livres, vêtements, gadgets et carte jeune.",
+              "boutique",
+            ],
+          ].map(([titre, texte, destination]) => (
+            <div style={styles.card} key={titre}>
+              <h3 style={styles.cardTitle}>{titre}</h3>
+              <p style={styles.cardText}>{texte}</p>
+              <button
+                style={styles.button}
+                onClick={() => aller(destination)}
+              >
+                CONSULTER
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+
+  const renderPortail = () => {
+    if (!adminConnecte) {
+      return (
+        <section
+          style={{
+            ...styles.section,
+            maxWidth: "560px",
+            margin: "30px auto 70px",
+          }}
+        >
+          <div style={styles.adminBox}>
+            <div style={{ textAlign: "center", marginBottom: "25px" }}>
+              <img
+                src={logoJadci}
+                alt="Logo JADCI"
+                style={{
+                  width: "105px",
+                  height: "105px",
+                  objectFit: "contain",
+                }}
+              />
+            </div>
+
+            <h2 style={styles.sectionTitle}>PORTAIL ADMINISTRATEUR</h2>
+            <p style={styles.sectionText}>
+              Cet espace est réservé à l'administration générale de la JADCI.
+            </p>
+
+            <label style={styles.label}>MOT DE PASSE ADMINISTRATEUR</label>
+            <input
+              type="password"
+              value={motDePasse}
+              onChange={(event) => {
+                setMotDePasse(event.target.value);
+                if (erreur) setErreur("");
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") connexionAdmin();
+              }}
+              placeholder="Entrez votre mot de passe"
+              style={styles.input}
+              autoComplete="current-password"
+            />
+
+            {erreur && (
+              <p style={{ color: "#b91c1c", fontWeight: 700 }}>{erreur}</p>
+            )}
+
+            <button
+              style={{ ...styles.button, width: "100%" }}
+              onClick={connexionAdmin}
+            >
+              SE CONNECTER
+            </button>
+
+            <p
+              style={{
+                marginTop: "18px",
+                color: "#64748b",
+                fontSize: "13px",
+                textAlign: "center",
+              }}
+            >
+              <strong></strong>
+            </p>
+          </div>
+        </section>
+      );
+    }
+
+    const demandesEnAttente = demandes.filter(
+      (demande) => demande.statut === "EN ATTENTE"
+    ).length;
+
+    return (
+      <>
+        <section style={styles.section}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "20px",
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: "30px",
+            }}
+          >
+            <div>
+              <h2 style={styles.sectionTitle}>
+                TABLEAU DE BORD ADMINISTRATEUR
+              </h2>
+              <p style={styles.sectionText}>
+                Gestion générale de la plateforme JADCI.
+              </p>
+            </div>
+
+            <button
+              style={styles.secondaryButton}
+              onClick={() => {
+                setAdminConnecte(false);
+                setErreur("");
+                setMotDePasse("");
+              }}
+            >
+              DÉCONNEXION
+            </button>
+          </div>
+
+          <div style={styles.cards}>
+            {[
+              ["DEMANDES EN ATTENTE", demandesEnAttente],
+              ["ANNONCES PUBLIÉES", annonces.length],
+              ["ÉGLISES ENREGISTRÉES", eglises.length],
+              ["PRODUITS BOUTIQUE", produits.length],
+            ].map(([titre, nombre]) => (
+              <div style={styles.card} key={titre}>
+                <h3 style={styles.cardTitle}>{titre}</h3>
+                <strong
+                  style={{
+                    display: "block",
+                    fontSize: "38px",
+                    color: "#2456d8",
+                    marginBottom: "5px",
+                  }}
+                >
+                  {nombre}
+                </strong>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>DEMANDES À TRAITER</h3>
+
+            <div style={styles.tableWrapper}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>TYPE</th>
+                    <th style={styles.th}>NOM</th>
+                    <th style={styles.th}>TÉLÉPHONE</th>
+                    <th style={styles.th}>VILLE</th>
+                    <th style={styles.th}>MATRICULE</th>
+                    <th style={styles.th}>STATUT</th>
+                    <th style={styles.th}>ACTION</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {demandes.map((demande) => (
+                    <tr key={demande.id}>
+                      <td style={styles.td}>{demande.type}</td>
+                      <td style={styles.td}>{demande.nom}</td>
+                      <td style={styles.td}>{demande.telephone}</td>
+                      <td style={styles.td}>{demande.ville}</td>
+                      <td style={styles.td}>{demande.matricule || "—"}</td>
+                      <td style={styles.td}>
+                        <strong>{demande.statut}</strong>
+                      </td>
+                      <td style={styles.td}>
+                        {demande.statut === "EN ATTENTE" ? (
+                          <div
+                            style={{
+                              display: "flex",
+                              gap: "8px",
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <button
+                              style={styles.button}
+                              onClick={() =>
+                                traiterDemande(demande.id, "VALIDÉE")
+                              }
+                            >
+                              VALIDER
+                            </button>
+
+                            <button
+                              style={{
+                                ...styles.secondaryButton,
+                                color: "#b91c1c",
+                                borderColor: "#fecaca",
+                              }}
+                              onClick={() =>
+                                traiterDemande(demande.id, "REFUSÉE")
+                              }
+                            >
+                              REFUSER
+                            </button>
+                          </div>
+                        ) : (
+                          "TRAITÉE"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section style={styles.section}>
+          <div style={styles.adminBox}>
+            <h3 style={styles.cardTitle}>
+              PUBLIER UNE ANNONCE OFFICIELLE
+            </h3>
+
+            <textarea
+              value={annonce}
+              onChange={(event) => setAnnonce(event.target.value)}
+              placeholder="Écrivez l'annonce officielle..."
+              style={{
+                ...styles.input,
+                minHeight: "130px",
+                resize: "vertical",
+              }}
+            />
+
+            <button style={styles.button} onClick={publierAnnonce}>
+              PUBLIER L'ANNONCE
+            </button>
+
+            <div style={{ marginTop: "25px" }}>
+              {annonces.map((item, index) => (
+                <div
+                  key={`${item}-${index}`}
+                  style={{
+                    padding: "15px 0",
+                    borderBottom: "1px solid #e5e7eb",
+                    color: "#475569",
+                  }}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  };
+
+  const renderUtilisateurs = () => (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>UTILISATEURS</h2>
+        <p style={styles.sectionText}>
+          Choisissez le type d'espace à créer.
+        </p>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: "10px",
+          marginBottom: "25px",
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          style={
+            typeInscription === "JEUNE"
+              ? styles.button
+              : styles.secondaryButton
+          }
+          onClick={() => {
+            setTypeInscription("JEUNE");
+            setInscriptionMessage("");
+          }}
+        >
+          ESPACE JEUNE
+        </button>
+
+        <button
+          style={
+            typeInscription === "RESPONSABLE RÉGIONAL"
+              ? styles.button
+              : styles.secondaryButton
+          }
+          onClick={() => {
+            setTypeInscription("RESPONSABLE RÉGIONAL");
+            setInscriptionMessage("");
+          }}
+        >
+          RESPONSABLE RÉGIONAL
+        </button>
+      </div>
+
+      <div style={styles.adminBox}>
+        <h3 style={styles.cardTitle}>
+          INSCRIPTION — {typeInscription}
+        </h3>
+
+        <form onSubmit={soumettreInscription}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(230px, 1fr))",
+              gap: "10px 18px",
+            }}
+          >
+            <div>
+              <label style={styles.label}>NOM ET PRÉNOMS *</label>
+              <input
+                style={styles.input}
+                value={inscription.nom}
+                onChange={(event) =>
+                  modifierInscription("nom", event.target.value)
+                }
+                placeholder="Nom et prénoms"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>TÉLÉPHONE *</label>
+              <input
+                style={styles.input}
+                value={inscription.telephone}
+                onChange={(event) =>
+                  modifierInscription("telephone", event.target.value)
+                }
+                placeholder="07 00 00 00 00"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>E-MAIL *</label>
+              <input
+                type="email"
+                style={styles.input}
+                value={inscription.email}
+                onChange={(event) =>
+                  modifierInscription("email", event.target.value)
+                }
+                placeholder="adresse@email.com"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>MOT DE PASSE *</label>
+              <input
+                type="password"
+                style={styles.input}
+                value={inscription.motDePasse}
+                onChange={(event) =>
+                  modifierInscription("motDePasse", event.target.value)
+                }
+                placeholder="Mot de passe"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>VILLE *</label>
+              <input
+                style={styles.input}
+                value={inscription.ville}
+                onChange={(event) =>
+                  modifierInscription("ville", event.target.value)
+                }
+                placeholder="Ville"
+                required
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>COMMUNE</label>
+              <input
+                style={styles.input}
+                value={inscription.commune}
+                onChange={(event) =>
+                  modifierInscription("commune", event.target.value)
+                }
+                placeholder="Commune"
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>QUARTIER</label>
+              <input
+                style={styles.input}
+                value={inscription.quartier}
+                onChange={(event) =>
+                  modifierInscription("quartier", event.target.value)
+                }
+                placeholder="Quartier"
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>SEXE</label>
+              <select
+                style={styles.input}
+                value={inscription.sexe}
+                onChange={(event) =>
+                  modifierInscription("sexe", event.target.value)
+                }
+              >
+                <option value="">Sélectionner</option>
+                <option value="HOMME">HOMME</option>
+                <option value="FEMME">FEMME</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={styles.label}>STATUT SOCIAL</label>
+              <input
+                style={styles.input}
+                value={inscription.statutSocial}
+                onChange={(event) =>
+                  modifierInscription("statutSocial", event.target.value)
+                }
+                placeholder="Étudiant, salarié..."
+              />
+            </div>
+
+            <div>
+              <label style={styles.label}>STATUT MATRIMONIAL</label>
+              <select
+                style={styles.input}
+                value={inscription.statutMatrimonial}
+                onChange={(event) =>
+                  modifierInscription(
+                    "statutMatrimonial",
+                    event.target.value
+                  )
+                }
+              >
+                <option value="">Sélectionner</option>
+                <option value="CÉLIBATAIRE">CÉLIBATAIRE</option>
+                <option value="MARIÉ(E)">MARIÉ(E)</option>
+              </select>
+            </div>
+
+            {typeInscription === "JEUNE" ? (
+              <>
+                <div>
+                  <label style={styles.label}>ÉGLISE LOCALE</label>
+                  <input
+                    style={styles.input}
+                    value={inscription.eglise}
+                    onChange={(event) =>
+                      modifierInscription("eglise", event.target.value)
+                    }
+                    placeholder="AD Temple de la Gloire"
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>COMITÉ / DÉPARTEMENT</label>
+                  <input
+                    style={styles.input}
+                    value={inscription.departement}
+                    onChange={(event) =>
+                      modifierInscription(
+                        "departement",
+                        event.target.value
+                      )
+                    }
+                    placeholder="Musique, prière..."
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>CV</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    style={styles.input}
+                    onChange={(event) =>
+                      modifierInscription(
+                        "cv",
+                        event.target.files?.[0] || null
+                      )
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label style={styles.label}>PHOTO DE PROFIL</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={styles.input}
+                    onChange={(event) =>
+                      modifierInscription(
+                        "photo",
+                        event.target.files?.[0] || null
+                      )
+                    }
+                  />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label style={styles.label}>RESPONSABILITÉ</label>
+                <input
+                  style={styles.input}
+                  value={inscription.responsabilite}
+                  onChange={(event) =>
+                    modifierInscription(
+                      "responsabilite",
+                      event.target.value
+                    )
+                  }
+                  placeholder="Responsabilité régionale"
+                />
+              </div>
+            )}
+          </div>
+
+          {inscriptionMessage && (
+            <div
+              style={{
+                margin: "10px 0 20px",
+                padding: "14px",
+                borderRadius: "10px",
+                background: "#f1f5f9",
+                color: "#334155",
+                fontWeight: 700,
+              }}
+            >
+              {inscriptionMessage}
+            </div>
+          )}
+
+          <button type="submit" style={styles.button}>
+            SOUMETTRE L'INSCRIPTION
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+
+  const renderEglises = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>LISTE DES ÉGLISES</h2>
+          <p style={styles.sectionText}>
+            Retrouvez les assemblées enregistrées sur la plateforme JADCI.
+          </p>
+        </div>
+
+        <input
+          style={{ ...styles.input, maxWidth: "650px" }}
+          value={rechercheEglise}
+          onChange={(event) => setRechercheEglise(event.target.value)}
+          placeholder="Rechercher une église, une ville, une commune ou un quartier..."
+        />
+
+        {eglisesFiltrees.length === 0 ? (
+          <div style={styles.card}>
+            <p style={styles.cardText}>Aucune église ne correspond à votre recherche.</p>
+          </div>
+        ) : (
+          <div style={styles.cards}>
+            {eglisesFiltrees.map((eglise) => (
+              <div style={styles.card} key={eglise.id}>
+                <h3 style={styles.cardTitle}>{eglise.nom}</h3>
+
+                <p style={styles.cardText}>
+                  <strong>Pasteur :</strong> {eglise.pasteur}
+                  <br />
+                  <strong>Ville :</strong> {eglise.ville}
+                  <br />
+                  <strong>Commune :</strong> {eglise.commune || "—"}
+                  <br />
+                  <strong>Quartier :</strong> {eglise.quartier || "—"}
+                </p>
+
+                <button
+                  type="button"
+                  style={styles.secondaryButton}
+                  onClick={() => {
+                    const url =
+                      eglise.localisation ||
+                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        `${eglise.nom} ${eglise.ville} ${eglise.commune || ""}`
+                      )}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  VOIR SUR GOOGLE MAPS
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.adminBox}>
+          <h3 style={styles.cardTitle}>SOUMETTRE UNE ÉGLISE</h3>
+
+          <form onSubmit={ajouterEglise}>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(230px, 1fr))",
+                gap: "10px 18px",
+              }}
+            >
+              {[
+                ["nom", "NOM DE L'ÉGLISE"],
+                ["pasteur", "NOM DU PASTEUR"],
+                ["ville", "VILLE"],
+                ["commune", "COMMUNE"],
+                ["quartier", "QUARTIER"],
+                ["localisation", "LIEN GOOGLE MAPS"],
+              ].map(([champ, label]) => (
+                <div key={champ}>
+                  <label style={styles.label}>{label}</label>
+                  <input
+                    style={styles.input}
+                    value={nouvelleEglise[champ]}
+                    onChange={(event) =>
+                      setNouvelleEglise((ancienne) => ({
+                        ...ancienne,
+                        [champ]: event.target.value,
+                      }))
+                    }
+                    placeholder={label}
+                    required={["nom", "pasteur", "ville"].includes(champ)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button type="submit" style={styles.button}>
+              SOUMETTRE L'ÉGLISE
+            </button>
+          </form>
+        </div>
+      </section>
+    </>
+  );
+
+  const renderBoutique = () => (
+    <>
+      <section style={styles.section}>
+        <div style={styles.sectionHeader}>
+          <h2 style={styles.sectionTitle}>BOUTIQUE JADCI</h2>
+          <p style={styles.sectionText}>
+            Commandez les produits disponibles et préparez votre livraison.
+          </p>
+        </div>
+
+        <div style={styles.cards}>
+          {produits.map((produit) => (
+            <div style={styles.card} key={produit.id}>
+              <div
+                style={{
+                  height: "130px",
+                  borderRadius: "15px",
+                  background:
+                    "linear-gradient(135deg, #f1eaff, #e7edff)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#5420a8",
+                  fontWeight: 900,
+                  marginBottom: "18px",
+                }}
+              >
+                {produit.categorie}
+              </div>
+
+              <h3 style={styles.cardTitle}>{produit.nom}</h3>
+              <p style={styles.cardText}>{produit.description}</p>
+
+              <strong
+                style={{
+                  display: "block",
+                  color: "#2456d8",
+                  fontSize: "20px",
+                  marginBottom: "15px",
+                }}
+              >
+                {produit.prix.toLocaleString("fr-FR")} FCFA
+              </strong>
+
+              <button
+                type="button"
+                style={styles.button}
+                onClick={() => ajouterAuPanier(produit)}
+              >
+                AJOUTER À LA COMMANDE
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section style={styles.section}>
+        <div style={styles.adminBox}>
+          <h3 style={styles.cardTitle}>MA COMMANDE</h3>
+
+          {panier.length === 0 ? (
+            <p style={styles.sectionText}>
+              Aucun produit dans la commande.
+            </p>
+          ) : (
+            <>
+              {panier.map((item) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: "15px",
+                    padding: "14px 0",
+                    borderBottom: "1px solid #e5e7eb",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <div>
+                    <strong>{item.nom}</strong>
+                    <div style={{ color: "#64748b", marginTop: "4px" }}>
+                      {item.prix.toLocaleString("fr-FR")} FCFA
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      style={styles.secondaryButton}
+                      onClick={() => modifierQuantite(item.id, -1)}
+                    >
+                      -
+                    </button>
+
+                    <strong>{item.quantite}</strong>
+
+                    <button
+                      type="button"
+                      style={styles.secondaryButton}
+                      onClick={() => modifierQuantite(item.id, 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: "15px",
+                  marginTop: "20px",
+                  fontSize: "20px",
+                  fontWeight: 900,
+                }}
+              >
+                <span>TOTAL</span>
+                <span>{totalPanier.toLocaleString("fr-FR")} FCFA</span>
+              </div>
+
+              <button
+                type="button"
+                style={{ ...styles.button, marginTop: "20px" }}
+                onClick={confirmerCommande}
+              >
+                CONFIRMER LA COMMANDE
+              </button>
+            </>
+          )}
+
+          {commandeMessage && (
+            <p
+              style={{
+                marginTop: "18px",
+                color: "#334155",
+                fontWeight: 700,
+              }}
+            >
+              {commandeMessage}
+            </p>
+          )}
+        </div>
+      </section>
+    </>
+  );
+
+  const renderAnnonces = () => (
+    <section style={styles.section}>
+      <div style={styles.sectionHeader}>
+        <h2 style={styles.sectionTitle}>ANNONCES JADCI</h2>
+        <p style={styles.sectionText}>
+          Programmes, événements et informations officielles.
+        </p>
+      </div>
+
+      <div style={styles.cards}>
+        {annonces.map((item, index) => (
+          <div style={styles.card} key={`${item}-${index}`}>
+            <h3 style={styles.cardTitle}>INFORMATION OFFICIELLE</h3>
+            <p style={styles.cardText}>{item}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <div style={styles.app}>
+      <header style={styles.header}>
+        <div style={styles.headerInner}>
+          <div style={styles.brand}>
+            <img
+              src={logoJadci}
+              alt="Logo JADCI"
+              style={styles.brandLogo}
+            />
+
+            <div>
+              <h1 style={styles.brandTitle}>JADCI</h1>
+              <p style={styles.brandSubtitle}>
+                Jeunesse des Assemblées de Dieu de Côte d'Ivoire
+              </p>
+            </div>
+          </div>
+
+          <nav style={styles.nav} aria-label="Navigation principale">
+            {navItems.map(([destination, label]) => (
+              <button
+                type="button"
+                key={destination}
+                style={styles.navButton(page === destination)}
+                onClick={() => aller(destination)}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <div style={styles.announcement}>
+        <div style={styles.announcementTitle}>ANNONCE</div>
+        <div style={styles.announcementText}>
+          {annonces[0] || "Bienvenue sur la plateforme officielle JADCI."}
+        </div>
+      </div>
+
+      <main style={styles.main}>
+        {page === "accueil" && renderAccueil()}
+        {page === "portail" && renderPortail()}
+        {page === "utilisateurs" && renderUtilisateurs()}
+        {page === "eglises" && renderEglises()}
+        {page === "boutique" && renderBoutique()}
+        {page === "annonces" && renderAnnonces()}
+      </main>
+
+      <footer style={styles.footer}>
+        <img
+          src={logoJadci}
+          alt="Logo JADCI"
+          style={styles.footerLogo}
+        />
+
+        <h3 style={{ margin: "0 0 8px", fontSize: "24px" }}>JADCI</h3>
+
+        <p style={{ margin: "0 0 8px", opacity: 0.85 }}>
+          JEUNESSE DES ASSEMBLÉES DE DIEU DE CÔTE D'IVOIRE
+        </p>
+
+        <strong style={{ color: "#fde047" }}>FOI • SERVICE • MISSION</strong>
+
+        <p
+          style={{
+            marginTop: "22px",
+            opacity: 0.5,
+            fontSize: "12px",
+          }}
+        >
+          Plateforme JADCI — Version de développement
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+export default App;

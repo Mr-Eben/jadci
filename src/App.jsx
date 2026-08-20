@@ -1,145 +1,143 @@
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import jsPDF from "jspdf";
+import * as XLSX from "xlsx";
+import Chart from "chart.js/auto";
 import logoJadci from "./assets/logo-jadci.png";
 import heroJeunesse1 from "./assets/hero-jeunesse-1.jpg";
 import heroJeunesse2 from "./assets/hero-jeunesse-2.jpg";
 import heroJeunesse3 from "./assets/hero-jeunesse-3.jpg";
 import "./App.css";
 
-const demandesInitiales = [
-  {
-    id: 1,
-    type: "JEUNE",
-    nom: "Kouassi Jean",
-    telephone: "07 00 00 00 00",
-    ville: "Abidjan",
-    statut: "EN ATTENTE",
-  },
-  {
-    id: 2,
-    type: "RESPONSABLE RÉGIONAL",
-    nom: "Yao Marie",
-    telephone: "05 00 00 00 00",
-    ville: "Bouaké",
-    statut: "EN ATTENTE",
-  },
-];
+/* ================================================================== */
+/* DONNÉES DE RÉFÉRENCE */
+/* ================================================================== */
+
+const heroBackgrounds = [heroJeunesse1, heroJeunesse2, heroJeunesse3];
 
 const eglisesInitiales = [
   {
     id: 1,
     nom: "AD Temple de la Grâce",
-    pasteur: "Pasteur responsable",
+    pasteur: "Pasteur Adama KONÉ",
+    telephone: "+225 07 07 00 01 02",
     ville: "Abidjan",
     commune: "Cocody",
-    quartier: "Riviera",
-    localisation: "",
+    quartier: "Riviera 2",
+    localisation: "https://maps.google.com/?q=Cocody+Riviera+2+Abidjan",
+    statut: "VALIDÉE",
+    responsableId: null,
   },
   {
     id: 2,
     nom: "AD Temple de la Gloire",
-    pasteur: "Pasteur responsable",
+    pasteur: "Pasteur Jean KOUASSI",
+    telephone: "+225 05 05 00 03 04",
     ville: "Abidjan",
     commune: "Yopougon",
     quartier: "Selmer",
-    localisation: "",
+    localisation: "https://maps.google.com/?q=Yopougon+Selmer+Abidjan",
+    statut: "VALIDÉE",
+    responsableId: null,
   },
   {
     id: 3,
     nom: "AD Temple de la Victoire",
-    pasteur: "Pasteur responsable",
+    pasteur: "Pasteur Emmanuel YAO",
+    telephone: "+225 01 01 00 05 06",
     ville: "Bouaké",
     commune: "Bouaké",
-    quartier: "Centre",
-    localisation: "",
+    quartier: "Commerce",
+    localisation: "https://maps.google.com/?q=Bouake+Commerce",
+    statut: "VALIDÉE",
+    responsableId: null,
   },
 ];
 
 const produitsInitiaux = [
   {
     id: 1,
-    nom: "Livre évangélique",
+    nom: "Livre d'étude Biblique JADCI",
     categorie: "LIVRES",
     prix: 5000,
-    description: "Ressource chrétienne disponible dans la boutique JADCI.",
+    description: "Guide complet pour l'affermissement de la jeunesse chrétienne.",
+    stock: 25,
+    image: "",
   },
   {
     id: 2,
-    nom: "Vêtement JADCI",
+    nom: "Polo Officiel JADCI",
     categorie: "VÊTEMENTS",
     prix: 10000,
-    description: "Vêtement officiel JADCI.",
+    description: "Polo officiel brodé aux couleurs du mouvement JADCI.",
+    stock: 15,
+    image: "",
   },
   {
     id: 3,
-    nom: "Gadget JADCI",
+    nom: "Mug Personnalisé JADCI",
     categorie: "GADGETS",
-    prix: 5000,
-    description: "Accessoire JADCI.",
+    prix: 3500,
+    description: "Mug officiel en céramique pour vos moments de pause.",
+    stock: 30,
+    image: "",
   },
   {
     id: 4,
-    nom: "Carte Jeune JADCI",
+    nom: "Carte Membre Jeune JADCI",
     categorie: "SERVICES",
     prix: 1000,
-    description: "Carte physique Jeune JADCI.",
+    description: "Carte physique officielle avec votre matricule unique.",
+    stock: 100,
+    image: "",
   },
 ];
 
-const mediasInitiales = [
+const articlesInitiaux = [
   {
     id: 1,
-    type: "PRÉDICATION",
-    titre: "Grandir dans la foi et servir avec excellence",
-    intervenant: "Prédication JADCI",
-    date: "Cette semaine",
-    description: "Retrouvez les enseignements et messages qui encouragent la jeunesse à vivre sa foi au quotidien.",
-    url: "https://www.youtube.com/results?search_query=JADCI+prédication",
-  },
-  {
-    id: 2,
-    type: "PRÉDICATION",
-    titre: "Jeunesse, foi, mission et engagement",
-    intervenant: "JADCI Média",
-    date: "À découvrir",
-    description: "Une sélection de contenus pour nourrir la foi, développer les talents et servir l'Église.",
-    url: "https://www.youtube.com/results?search_query=JADCI+jeunesse",
-  },
-  {
-    id: 3,
-    type: "ÉVÉNEMENT",
-    titre: "Prochain grand rendez-vous JADCI",
-    intervenant: "Communication JADCI",
-    date: "Bientôt",
-    description: "Les informations officielles, programmes et directs seront centralisés ici.",
-    url: "https://www.youtube.com/results?search_query=JADCI",
+    titre: "Bienvenue sur la plateforme officielle JADCI",
+    contenu:
+      "Retrouvez ici les actualités, événements, vidéos et ressources pour l'épanouissement spirituel et social de la jeunesse.",
+    image: "",
+    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    documentUrl: "",
+    datePublication: new Date().toISOString().slice(0, 10),
+    categorie: "ACTUALITÉ",
   },
 ];
 
 const directInitial = {
   actif: false,
-  titre: "Direct JADCI",
-  sousTitre: "Le direct officiel sera disponible ici.",
-  url: "https://www.youtube.com/@JADCI",
+  titre: "Direct Officiel JADCI",
+  sousTitre: "Suivez en direct nos cultes, rassemblements et conférences.",
+  facebookUrl: "https://facebook.com/JADCI",
+  youtubeUrl: "https://youtube.com/@JADCI",
 };
 
-const inscriptionInitiale = {
-  nom: "",
-  telephone: "",
-  email: "",
-  ville: "",
-  commune: "",
-  quartier: "",
-  statutSocial: "",
-  statutMatrimonial: "",
-  sexe: "",
-  eglise: "",
-  departement: "",
-  responsabilite: "",
-  motDePasse: "",
-  cv: null,
-  photo: null,
-};
+const comptesAdmin = [
+  {
+    matricule: "AGENT-X-26",
+    motDePasse: "JADCI-X-2026",
+    role: "GENERAL",
+    label: "Administrateur Général",
+  },
+  {
+    matricule: "ADM-MKT-26",
+    motDePasse: "Treso-Store-26",
+    role: "MARKETING",
+    label: "Admin Marketing",
+  },
+  {
+    matricule: "CO-ADM-26",
+    motDePasse: "JADCI-Com26",
+    role: "COM",
+    label: "Admin Communication",
+  },
+];
 
+/* ================================================================== */
+/* UTILITAIRES */
+/* ================================================================== */
 
 function useLocalStorageState(key, initialValue) {
   const [value, setValue] = useState(() => {
@@ -155,3313 +153,1804 @@ function useLocalStorageState(key, initialValue) {
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
     } catch {
-      // Local storage can be unavailable in some browser modes.
+      console.error(`Erreur lors de la sauvegarde de ${key}`);
     }
   }, [key, value]);
 
   return [value, setValue];
 }
 
-const nouvelleEgliseInitiale = {
-  nom: "",
-  pasteur: "",
-  ville: "",
-  commune: "",
-  quartier: "",
-  localisation: "",
+const lireFichierEnBase64 = (fichier) =>
+  new Promise((resolve, reject) => {
+    if (!fichier) {
+      resolve("");
+      return;
+    }
+    const lecteur = new FileReader();
+    lecteur.onload = () => resolve(lecteur.result);
+    lecteur.onerror = reject;
+    lecteur.readAsDataURL(fichier);
+  });
+
+const genererMatriculeJADCI = (genre, nom, isIvoirien, sequence) => {
+  const g = genre === "FEMME" ? "F" : "H";
+  const initial = (nom || "X").trim().charAt(0).toUpperCase();
+  const mois = new Date().getMonth() + 1;
+  const nat = isIvoirien ? "1" : "2";
+  const annee = new Date().getFullYear().toString().slice(-2);
+  const seq = String(sequence).padStart(4, "0");
+  return `${g}${initial}${mois}${nat}K${annee}${seq}`;
 };
 
-const heroBackgrounds = [heroJeunesse1, heroJeunesse2, heroJeunesse3];
-
-const connexionJeuneInitiale = { email: "", motDePasse: "" };
-const compteJeuneInitial = {
-  nom: "",
-  telephone: "",
-  email: "",
-  ville: "",
-  motDePasse: "",
-  confirmation: "",
-};
-const connexionResponsableInitiale = { email: "", motDePasse: "" };
-const compteResponsableInitial = {
-  nom: "",
-  telephone: "",
-  email: "",
-  ville: "",
-  responsabilite: "",
-  motDePasse: "",
-  confirmation: "",
+const exporterExcel = (donnees, nomFeuille, nomFichier) => {
+  if (!donnees || donnees.length === 0) return;
+  const feuille = XLSX.utils.json_to_sheet(donnees);
+  const classeur = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(classeur, feuille, nomFeuille.slice(0, 31));
+  XLSX.writeFile(classeur, `${nomFichier}.xlsx`);
 };
 
-function App() {
+const exporterPDF = (contenu, titre, nomFichier) => {
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text(titre, 10, 10);
+  doc.setFontSize(11);
+  doc.text(contenu, 10, 20);
+  doc.save(`${nomFichier}.pdf`);
+};
+
+/* ================================================================== */
+/* COMPOSANT PRINCIPAL */
+/* ================================================================== */
+
+export default function App() {
   const [page, setPage] = useState("accueil");
-  const [adminConnecte, setAdminConnecte] = useState(false);
-  const [motDePasse, setMotDePasse] = useState("");
-  const [erreur, setErreur] = useState("");
-
-  const [demandes, setDemandes] = useLocalStorageState("jadci_demandes", demandesInitiales);
-  const [annonce, setAnnonce] = useState("");
-  const [annonces, setAnnonces] = useLocalStorageState("jadci_annonces", [
-    "Bienvenue sur la plateforme officielle JADCI.",
-    "Les inscriptions des jeunes et responsables régionaux sont ouvertes.",
-    "Carte Jeune JADCI : 1 000 FCFA.",
-  ]);
-
-  const [eglises, setEglises] = useLocalStorageState("jadci_eglises", eglisesInitiales.map((e) => ({ ...e, statut: e.statut || "VALIDÉE" })));
-  const [rechercheEglise, setRechercheEglise] = useState("");
-
-  const [produits, setProduits] = useLocalStorageState("jadci_produits", produitsInitiaux.map((p) => ({ ...p, nature: p.nature || p.categorie, stock: p.stock ?? 10, appreciation: p.appreciation ?? 5 })));
-  const [panier, setPanier] = useState([]);
-
-  const [typeInscription, setTypeInscription] = useState("JEUNE");
-  const [inscription, setInscription] = useState(inscriptionInitiale);
-  const [inscriptionMessage, setInscriptionMessage] = useState("");
-
-  const [nouvelleEglise, setNouvelleEglise] = useState(
-    nouvelleEgliseInitiale
-  );
-
-  const [commandeMessage, setCommandeMessage] = useState("");
-  const [annonceActive, setAnnonceActive] = useState(0);
-  const [medias] = useState(mediasInitiales);
-  const [direct, setDirect] = useState(directInitial);
-  const [mediaFiltre, setMediaFiltre] = useState("TOUT");
-
-  const [articles, setArticles] = useLocalStorageState("jadci_articles", [
-    {
-      id: 1,
-      titre: "Bienvenue sur la plateforme officielle JADCI",
-      contenu: "Retrouvez ici les actualités, programmes et ressources de la jeunesse.",
-      image: "",
-      datePublication: new Date().toISOString().slice(0, 10),
-      dateEvenement: "",
-      categorie: "ACTUALITÉ",
-    },
-  ]);
-
-  const [projets, setProjets] = useLocalStorageState("jadci_projets", [
-    {
-      id: 1,
-      titre: "Soutenir un projet jeunesse",
-      description: "Participez librement au financement des initiatives de la jeunesse JADCI.",
-      objectif: 1000000,
-      collecte: 0,
-      image: "",
-      actif: true,
-    },
-  ]);
-
-  const [leaderMois, setLeaderMois] = useLocalStorageState("jadci_leader", {
-    nom: "À définir",
-    photo: "",
-    presentation: "Le jeune leader du mois sera présenté ici.",
-    mois: new Date().toISOString().slice(0, 7),
-  });
-
-  const [adminTab, setAdminTab] = useState("dashboard");
-  const [adminMessage, setAdminMessage] = useState("");
-  const [produitForm, setProduitForm] = useState({
-    id: null,
-    nom: "",
-    nature: "LIVRES",
-    categorie: "LIVRES",
-    prix: "",
-    description: "",
-    stock: 0,
-    appreciation: 5,
-    image: "",
-  });
-  const [articleForm, setArticleForm] = useState({
-    id: null,
-    titre: "",
-    contenu: "",
-    image: "",
-    datePublication: new Date().toISOString().slice(0, 10),
-    dateEvenement: "",
-    categorie: "ACTUALITÉ",
-  });
-  const [projetForm, setProjetForm] = useState({
-    id: null,
-    titre: "",
-    description: "",
-    objectif: "",
-    image: "",
-    actif: true,
-  });
-  const [leaderForm, setLeaderForm] = useState(leaderMois);
-
-  // --- Espace Jeunes (🟨) ---
-  const [comptesJeunes, setComptesJeunes] = useLocalStorageState("jadci_comptes_jeunes", []);
-  const [jeuneConnecte, setJeuneConnecte] = useLocalStorageState("jadci_jeune_session", null);
-  const [modeEspaceJeune, setModeEspaceJeune] = useState("connexion");
-  const [connexionJeune, setConnexionJeune] = useState(connexionJeuneInitiale);
-  const [compteJeune, setCompteJeune] = useState(compteJeuneInitial);
-  const [messageEspaceJeune, setMessageEspaceJeune] = useState("");
-
-  // --- Espace Responsable (🟩) ---
-  const [comptesResponsables, setComptesResponsables] = useLocalStorageState("jadci_comptes_responsables", []);
-  const [responsableConnecte, setResponsableConnecte] = useLocalStorageState("jadci_responsable_session", null);
-  const [modeEspaceResponsable, setModeEspaceResponsable] = useState("connexion");
-  const [connexionResponsable, setConnexionResponsable] = useState(connexionResponsableInitiale);
-  const [compteResponsable, setCompteResponsable] = useState(compteResponsableInitial);
-  const [messageEspaceResponsable, setMessageEspaceResponsable] = useState("");
-
-  // --- Espace Gérant (👤) ---
-  const [gerantConnecte, setGerantConnecte] = useState(false);
-  const [motDePasseGerant, setMotDePasseGerant] = useState("");
-  const [erreurGerant, setErreurGerant] = useState("");
-  const [messageGerant, setMessageGerant] = useState("");
-
-  // --- Accueil : rotation des 3 images de fond ---
   const [indexFond, setIndexFond] = useState(0);
 
+  // Annonces & Médias
+  const [annonces, setAnnonces] = useLocalStorageState("jadci_annonces_v4", [
+    "Bienvenue sur la plateforme officielle de la Jeunesse des Assemblées de Dieu de Côte d'Ivoire (JADCI).",
+    "Les inscriptions pour les Espaces Jeunes et Responsables sont ouvertes.",
+    "Commandez vos articles officiels sur la Boutique en ligne.",
+  ]);
+  const [annonceActive, setAnnonceActive] = useState(0);
+  const [nouvelleAnnonce, setNouvelleAnnonce] = useState("");
+
+  const [articles, setArticles] = useLocalStorageState(
+    "jadci_articles_v4",
+    articlesInitiaux
+  );
+  const [direct, setDirect] = useLocalStorageState("jadci_direct_v4", directInitial);
+
+  // Églises & Annuaire
+  const [eglises, setEglises] = useLocalStorageState("jadci_eglises_v4", eglisesInitiales);
+  const [rechercheEglise, setRechercheEglise] = useState("");
+
+  // Boutique & Produits
+  const [produits, setProduits] = useLocalStorageState("jadci_produits_v4", produitsInitiaux);
+  const [panier, setPanier] = useState([]);
+  const [commandeMessage, setCommandeMessage] = useState("");
+
+  // Séquences globales
+  const [seqUtilisateur, setSeqUtilisateur] = useLocalStorageState("jadci_seq_user_v4", 1);
+  const [seqRecu, setSeqRecu] = useLocalStorageState("jadci_seq_recu_v4", 1);
+
+  // Comptes Jeunes et Responsables
+  const [comptesJeunes, setComptesJeunes] = useLocalStorageState("jadci_comptes_jeunes_v4", []);
+  const [comptesResponsables, setComptesResponsables] = useLocalStorageState(
+    "jadci_comptes_resp_v4",
+    []
+  );
+
+  const [jeuneConnecte, setJeuneConnecte] = useLocalStorageState("jadci_session_jeune_v4", null);
+  const [responsableConnecte, setResponsableConnecte] = useLocalStorageState(
+    "jadci_session_resp_v4",
+    null
+  );
+
+  const [typeEspaceForm, setTypeEspaceForm] = useState("jeune");
+  const [modeEspace, setModeEspace] = useState("connexion");
+  const [messageEspace, setMessageEspace] = useState("");
+
+  // Formulaires
+  const [formConnexion, setFormConnexion] = useState({ email: "", motDePasse: "" });
+  const [formInscription, setFormInscription] = useState({
+    nom: "",
+    genre: "HOMME",
+    nationaliteIvoirienne: true,
+    telephone: "",
+    email: "",
+    motDePasse: "",
+    confirmation: "",
+  });
+
+  // Profils détaillés Jeunes
+  const [formProfilJeune, setFormProfilJeune] = useState({
+    dateNaissance: "",
+    eglise: "",
+    baptemeEau: "NON",
+    situationMatrimoniale: "CÉLIBATAIRE",
+    photoProfile: "",
+    cv: "",
+  });
+
+  // Profils détaillés Responsables
+  const [formProfilResponsable, setFormProfilResponsable] = useState({
+    dateNaissance: "",
+    eglise: "",
+    baptemeEau: "NON",
+    situationMatrimoniale: "CÉLIBATAIRE",
+    photoProfile: "",
+  });
+
+  // Requêtes, Projets, Candidatures
+  const [requetes, setRequetes] = useLocalStorageState("jadci_requetes_v4", []);
+  const [projets, setProjets] = useLocalStorageState("jadci_projets_v4", []);
+  const [candidatures, setCandidatures] = useLocalStorageState("jadci_candidatures_v4", []);
+  const [recommandations, setRecommandations] = useLocalStorageState(
+    "jadci_recommandations_v4",
+    []
+  );
+  const [rapports, setRapports] = useLocalStorageState("jadci_rapports_v4", []);
+  const [convocations, setConvocations] = useLocalStorageState("jadci_convocations_v4", []);
+
+  // Administration
+  const [adminSession, setAdminSession] = useState(null);
+  const [identifiantAdminInput, setIdentifiantAdminInput] = useState("");
+  const [motDePasseAdminInput, setMotDePasseAdminInput] = useState("");
+  const [erreurAdmin, setErreurAdmin] = useState("");
+  const [adminTab, setAdminTab] = useState("dashboard");
+
+  // Nouveaux produits (Admin Marketing)
+  const [nouveauProduit, setNouveauProduit] = useState({
+    nom: "",
+    prix: 0,
+    categorie: "VÊTEMENTS",
+    description: "",
+    stock: 10,
+    image: "",
+  });
+
+  // Animations Carrousel
   useEffect(() => {
-    if (annonces.length < 2) return undefined;
-
-    const timer = window.setInterval(() => {
-      setAnnonceActive((index) => (index + 1) % annonces.length);
-    }, 4500);
-
-    return () => window.clearInterval(timer);
+    if (annonces.length > 0) {
+      const timer = setInterval(() => {
+        setAnnonceActive((i) => (i + 1) % annonces.length);
+      }, 5000);
+      return () => clearInterval(timer);
+    }
   }, [annonces.length]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setIndexFond((index) => (index + 1) % heroBackgrounds.length);
+    const timer = setInterval(() => {
+      setIndexFond((i) => (i + 1) % heroBackgrounds.length);
     }, 6000);
-
-    return () => window.clearInterval(timer);
+    return () => clearInterval(timer);
   }, []);
-
-  const navItems = [
-    ["accueil", "ACCUEIL"],
-    ["portail", "PORTAIL"],
-    ["utilisateurs", "UTILISATEURS"],
-    ["espaces", "ESPACES"],
-    ["eglises", "ÉGLISES"],
-    ["medias", "DIRECT & PRÉDICATIONS"],
-    ["boutique", "BOUTIQUE"],
-    ["annonces", "ANNONCES"],
-  ];
 
   const aller = (destination) => {
     setPage(destination);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const connexionAdmin = () => {
-    if (motDePasse === "JADCI2026") {
-      setAdminConnecte(true);
-      setErreur("");
-      setMotDePasse("");
-    } else {
-      setErreur("Mot de passe administrateur incorrect.");
+  /* ================================================================== */
+  /* INSCRIPTIONS & CONNEXIONS */
+  /* ================================================================== */
+
+  const traiterInscription = (e) => {
+    e.preventDefault();
+    const {
+      nom,
+      genre,
+      nationaliteIvoirienne,
+      telephone,
+      email,
+      motDePasse,
+      confirmation,
+    } = formInscription;
+
+    if (!nom.trim() || !telephone.trim() || !email.trim() || !motDePasse.trim()) {
+      setMessageEspace("Veuillez remplir tous les champs obligatoires.");
+      return;
     }
-  };
-
-  const traiterDemande = (id, nouveauStatut) => {
-    setDemandes((liste) =>
-      liste.map((demande) =>
-        demande.id === id
-          ? { ...demande, statut: nouveauStatut }
-          : demande
-      )
-    );
-  };
-
-  const publierAnnonce = () => {
-    const texte = annonce.trim();
-    if (!texte) return;
-
-    setAnnonces((liste) => [texte, ...liste]);
-    setAnnonce("");
-  };
-
-  const genererMatricule = (nom) => {
-    const premierNom = nom.trim().split(/\s+/).filter(Boolean)[0];
-    const initiale = premierNom
-      ? premierNom.substring(0, 3).toUpperCase()
-      : "JAD";
-    const nombre = Math.floor(10000 + Math.random() * 90000);
-
-    return `${initiale}${nombre}`;
-  };
-
-  const modifierInscription = (champ, valeur) => {
-    setInscription((ancienne) => ({
-      ...ancienne,
-      [champ]: valeur,
-    }));
-  };
-
-  const soumettreInscription = (event) => {
-    event.preventDefault();
-
-    if (
-      !inscription.nom.trim() ||
-      !inscription.telephone.trim() ||
-      !inscription.email.trim() ||
-      !inscription.ville.trim() ||
-      !inscription.motDePasse.trim()
-    ) {
-      setInscriptionMessage("Veuillez remplir les champs obligatoires.");
+    if (motDePasse !== confirmation) {
+      setMessageEspace("Les mots de passe ne correspondent pas.");
       return;
     }
 
-    const matricule = genererMatricule(inscription.nom);
+    const emailExiste = [...comptesJeunes, ...comptesResponsables].some(
+      (c) => c.email.toLowerCase() === email.trim().toLowerCase()
+    );
+    if (emailExiste) {
+      setMessageEspace("Un compte avec cette adresse email existe déjà.");
+      return;
+    }
 
-    const nouvelleDemande = {
+    const matricule = genererMatriculeJADCI(genre, nom, nationaliteIvoirienne, seqUtilisateur);
+    setSeqUtilisateur(seqUtilisateur + 1);
+
+    const nouveauCompte = {
       id: Date.now(),
-      type: typeInscription,
-      nom: inscription.nom.trim(),
-      telephone: inscription.telephone.trim(),
-      ville: inscription.ville.trim(),
-      statut: "EN ATTENTE",
       matricule,
+      nom: nom.trim(),
+      genre,
+      nationaliteIvoirienne,
+      telephone: telephone.trim(),
+      email: email.trim(),
+      motDePasse,
+      commandes: [],
+      requetes: [],
+      projets: [],
+      candidatures: [],
+      recommandations: [],
+      rapports: [],
+      convocations: [],
+      dateCreation: new Date().toLocaleDateString("fr-FR"),
+      ...formProfilJeune,
+      ...formProfilResponsable,
     };
 
-    setDemandes((liste) => [nouvelleDemande, ...liste]);
-
-    setInscriptionMessage(
-      `Votre demande a été enregistrée. Matricule provisoire : ${matricule}. La validation définitive sera effectuée par l'administration.`
-    );
-
-    setInscription(inscriptionInitiale);
-  };
-
-  const ajouterAuPanier = (produit) => {
-    if ((produit.stock ?? 0) <= 0) {
-      setCommandeMessage("Ce produit est en rupture de stock.");
-      return;
+    if (typeEspaceForm === "jeune") {
+      setComptesJeunes((prev) => [...prev, nouveauCompte]);
+      setJeuneConnecte(nouveauCompte);
+      setResponsableConnecte(null);
+    } else {
+      setComptesResponsables((prev) => [...prev, nouveauCompte]);
+      setResponsableConnecte(nouveauCompte);
+      setJeuneConnecte(null);
     }
 
-    setProduits((liste) =>
-      liste.map((item) =>
-        item.id === produit.id ? { ...item, stock: Math.max(0, (item.stock ?? 0) - 1) } : item
-      )
-    );
-
-    setPanier((ancienPanier) => {
-      const existe = ancienPanier.find((item) => item.id === produit.id);
-
-      if (existe) {
-        return ancienPanier.map((item) =>
-          item.id === produit.id
-            ? { ...item, quantite: item.quantite + 1 }
-            : item
-        );
-      }
-
-      return [...ancienPanier, { ...produit, quantite: 1 }];
+    setMessageEspace("");
+    setFormInscription({
+      nom: "",
+      genre: "HOMME",
+      nationaliteIvoirienne: true,
+      telephone: "",
+      email: "",
+      motDePasse: "",
+      confirmation: "",
     });
-
-    setCommandeMessage(`${produit.nom} a été ajouté à votre commande.`);
+    setFormProfilJeune({
+      dateNaissance: "",
+      eglise: "",
+      baptemeEau: "NON",
+      situationMatrimoniale: "CÉLIBATAIRE",
+      photoProfile: "",
+      cv: "",
+    });
   };
 
-  const modifierQuantite = (id, variation) => {
-    setPanier((ancienPanier) =>
-      ancienPanier
-        .map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                quantite: Math.max(0, item.quantite + variation),
-              }
-            : item
-        )
+  const traiterConnexion = (e) => {
+    e.preventDefault();
+    const { email, motDePasse } = formConnexion;
+
+    if (typeEspaceForm === "jeune") {
+      const compte = comptesJeunes.find(
+        (c) => c.email.toLowerCase() === email.trim().toLowerCase()
+      );
+      if (!compte || compte.motDePasse !== motDePasse) {
+        setMessageEspace("Identifiants incorrects pour l'Espace Jeune.");
+        return;
+      }
+      setJeuneConnecte(compte);
+      setResponsableConnecte(null);
+    } else {
+      const compte = comptesResponsables.find(
+        (c) => c.email.toLowerCase() === email.trim().toLowerCase()
+      );
+      if (!compte || compte.motDePasse !== motDePasse) {
+        setMessageEspace("Identifiants incorrects pour l'Espace Responsable.");
+        return;
+      }
+      setResponsableConnecte(compte);
+      setJeuneConnecte(null);
+    }
+
+    setMessageEspace("");
+    setFormConnexion({ email: "", motDePasse: "" });
+  };
+
+  const deconnecterTout = () => {
+    setJeuneConnecte(null);
+    setResponsableConnecte(null);
+  };
+
+  const majProfilJeune = (champs) => {
+    if (!jeuneConnecte) return;
+    const maj = { ...jeuneConnecte, ...champs };
+    setJeuneConnecte(maj);
+    setComptesJeunes((list) => list.map((c) => (c.id === maj.id ? maj : c)));
+  };
+
+  const majProfilResponsable = (champs) => {
+    if (!responsableConnecte) return;
+    const maj = { ...responsableConnecte, ...champs };
+    setResponsableConnecte(maj);
+    setComptesResponsables((list) => list.map((c) => (c.id === maj.id ? maj : c)));
+  };
+
+  /* ================================================================== */
+  /* ÉGLISES & ANNUAIRE */
+  /* ================================================================== */
+
+  const soumettreNouvelleEglise = (e) => {
+    e.preventDefault();
+    if (!responsableConnecte) return;
+    const form = new FormData(e.target);
+    const nouvelle = {
+      id: Date.now(),
+      nom: form.get("nom").toString().trim(),
+      pasteur: form.get("pasteur").toString().trim(),
+      telephone: form.get("telephone").toString().trim(),
+      ville: form.get("ville").toString().trim(),
+      commune: form.get("commune").toString().trim(),
+      quartier: form.get("quartier").toString().trim(),
+      localisation: form.get("localisation").toString().trim(),
+      statut: "EN ATTENTE",
+      responsableId: responsableConnecte.id,
+    };
+    setEglises((prev) => [...prev, nouvelle]);
+    e.target.reset();
+    setMessageEspace("Église soumise avec succès. Elle apparaîtra après validation.");
+  };
+
+  const eglisesValidees = useMemo(
+    () => eglises.filter((e) => e.statut === "VALIDÉE"),
+    [eglises]
+  );
+  const eglisesFiltrees = useMemo(() => {
+    const q = rechercheEglise.toLowerCase().trim();
+    if (!q) return eglisesValidees;
+    return eglisesValidees.filter(
+      (e) =>
+        e.nom.toLowerCase().includes(q) ||
+        e.ville.toLowerCase().includes(q) ||
+        (e.commune || "").toLowerCase().includes(q) ||
+        (e.quartier || "").toLowerCase().includes(q)
+    );
+  }, [eglisesValidees, rechercheEglise]);
+
+  /* ================================================================== */
+  /* BOUTIQUE & COMMANDES */
+  /* ================================================================== */
+
+  const ajouterAuPanier = (prod) => {
+    if (prod.stock <= 0) {
+      setCommandeMessage(`${prod.nom} n'est pas disponible.`);
+      return;
+    }
+    setPanier((ancien) => {
+      const existe = ancien.find((item) => item.id === prod.id);
+      if (existe) {
+        return ancien.map((item) =>
+          item.id === prod.id ? { ...item, quantite: item.quantite + 1 } : item
+        );
+      }
+      return [...ancien, { ...prod, quantite: 1 }];
+    });
+    setCommandeMessage(`${prod.nom} ajouté au panier.`);
+  };
+
+  const modifierQuantite = (id, delta) => {
+    setPanier((ancien) =>
+      ancien
+        .map((item) => (item.id === id ? { ...item, quantite: Math.max(0, item.quantite + delta) } : item))
         .filter((item) => item.quantite > 0)
     );
   };
 
-  const totalPanier = useMemo(
-    () =>
-      panier.reduce(
-        (total, item) => total + item.prix * item.quantite,
-        0
-      ),
-    [panier]
-  );
+  const totalPanier = useMemo(() => panier.reduce((sum, i) => sum + i.prix * i.quantite, 0), [panier]);
 
-  const confirmerCommande = () => {
+  const passerCommandeBoutique = () => {
+    const compteActif = jeuneConnecte || responsableConnecte;
+    if (!compteActif) {
+      setCommandeMessage("Veuillez vous connecter à votre Espace Personnel pour passer commande.");
+      return;
+    }
     if (panier.length === 0) {
-      setCommandeMessage("Votre commande est vide.");
+      setCommandeMessage("Votre panier est vide.");
       return;
     }
 
-    const commandeTotal = totalPanier;
+    const nouvelleCommande = {
+      id: Date.now(),
+      ref: `CMD-${Date.now().toString().slice(-6)}`,
+      articles: panier.map((p) => ({ nom: p.nom, quantite: p.quantite, prix: p.prix })),
+      total: totalPanier,
+      date: new Date().toLocaleDateString("fr-FR"),
+      statut: "EN ATTENTE DE PAIEMENT",
+      codeRecu: "",
+      datePaiement: "",
+    };
 
-    setCommandeMessage(
-      `Commande enregistrée pour un montant de ${totalPanier.toLocaleString(
-        "fr-FR"
-      )} FCFA. Le traitement de la commande sera effectué par l'administration.`
+    setProduits((prev) =>
+      prev.map((p) => {
+        const item = panier.find((i) => i.id === p.id);
+        return item ? { ...p, stock: Math.max(0, p.stock - item.quantite) } : p;
+      })
     );
 
     if (jeuneConnecte) {
-      setComptesJeunes((liste) =>
-        liste.map((compte) =>
-          compte.id === jeuneConnecte.id
-            ? {
-                ...compte,
-                commandes: [
-                  {
-                    id: Date.now(),
-                    articles: panier.map((item) => ({ nom: item.nom, quantite: item.quantite, prix: item.prix })),
-                    total: commandeTotal,
-                    date: new Date().toLocaleDateString("fr-FR"),
-                    statut: "EN COURS",
-                  },
-                  ...(compte.commandes || []),
-                ],
-              }
-            : compte
-        )
-      );
-      setJeuneConnecte((session) =>
-        session
-          ? {
-              ...session,
-              commandes: [
-                {
-                  id: Date.now(),
-                  articles: panier.map((item) => ({ nom: item.nom, quantite: item.quantite, prix: item.prix })),
-                  total: commandeTotal,
-                  date: new Date().toLocaleDateString("fr-FR"),
-                  statut: "EN COURS",
-                },
-                ...(session.commandes || []),
-              ],
-            }
-          : session
-      );
+      majProfilJeune({ commandes: [nouvelleCommande, ...(jeuneConnecte.commandes || [])] });
+    } else {
+      majProfilResponsable({ commandes: [nouvelleCommande, ...(responsableConnecte.commandes || [])] });
     }
 
     setPanier([]);
+    setCommandeMessage("Commande enregistrée. Finalisez le paiement depuis votre espace personnel.");
   };
 
-  const ajouterEglise = (event) => {
-    event.preventDefault();
+  const payerCommandeDepuisEspace = (commandeId) => {
+    const compteActif = jeuneConnecte || responsableConnecte;
+    if (!compteActif) return;
 
-    if (
-      !nouvelleEglise.nom.trim() ||
-      !nouvelleEglise.pasteur.trim() ||
-      !nouvelleEglise.ville.trim()
-    ) {
-      return;
-    }
+    const codeRecu = `JAD-2026-${String(seqRecu).padStart(6, "0")}`;
+    setSeqRecu(seqRecu + 1);
 
-    setEglises((liste) => [
-      ...liste,
-      {
-        id: Date.now(),
-        ...nouvelleEglise,
-        nom: nouvelleEglise.nom.trim(),
-        pasteur: nouvelleEglise.pasteur.trim(),
-        ville: nouvelleEglise.ville.trim(),
-        statut: "EN ATTENTE",
-      },
-    ]);
+    const datePaiement = new Date().toLocaleDateString("fr-FR");
 
-    setNouvelleEglise(nouvelleEgliseInitiale);
-  };
-
-
-  const modifierStatutEglise = (id, statut) => {
-    setEglises((liste) =>
-      liste.map((eglise) => (eglise.id === id ? { ...eglise, statut } : eglise))
-    );
-    setAdminMessage(`Église ${statut.toLowerCase()} avec succès.`);
-  };
-
-  const enregistrerProduit = (event) => {
-    event.preventDefault();
-    if (!produitForm.nom.trim() || !produitForm.prix) return;
-
-    const produit = {
-      id: produitForm.id || Date.now(),
-      nom: produitForm.nom.trim(),
-      nature: produitForm.nature,
-      categorie: produitForm.nature,
-      prix: Number(produitForm.prix),
-      description: produitForm.description.trim(),
-      stock: Math.max(0, Number(produitForm.stock) || 0),
-      appreciation: Math.min(5, Math.max(0, Number(produitForm.appreciation) || 0)),
-      image: produitForm.image.trim(),
-    };
-
-    setProduits((liste) =>
-      produitForm.id
-        ? liste.map((item) => (item.id === produitForm.id ? produit : item))
-        : [produit, ...liste]
+    const majCommandes = (compteActif.commandes || []).map((cmd) =>
+      cmd.id === commandeId ? { ...cmd, statut: "PAYÉE", codeRecu, datePaiement } : cmd
     );
 
-    setProduitForm({
-      id: null,
-      nom: "",
-      nature: "LIVRES",
-      categorie: "LIVRES",
-      prix: "",
-      description: "",
-      stock: 0,
-      appreciation: 5,
-      image: "",
-    });
-    setAdminMessage("Produit enregistré. Il est immédiatement visible dans la boutique.");
-  };
-
-  const supprimerProduit = (id) => {
-    setProduits((liste) => liste.filter((item) => item.id !== id));
-    setAdminMessage("Produit supprimé.");
-  };
-
-  const enregistrerArticle = (event) => {
-    event.preventDefault();
-    if (!articleForm.titre.trim() || !articleForm.contenu.trim()) return;
-
-    const article = {
-      ...articleForm,
-      id: articleForm.id || Date.now(),
-      titre: articleForm.titre.trim(),
-      contenu: articleForm.contenu.trim(),
-    };
-
-    setArticles((liste) =>
-      articleForm.id
-        ? liste.map((item) => (item.id === articleForm.id ? article : item))
-        : [article, ...liste]
-    );
-
-    setArticleForm({
-      id: null,
-      titre: "",
-      contenu: "",
-      image: "",
-      datePublication: new Date().toISOString().slice(0, 10),
-      dateEvenement: "",
-      categorie: "ACTUALITÉ",
-    });
-    setAdminMessage("Article publié.");
-  };
-
-  const supprimerArticle = (id) => {
-    setArticles((liste) => liste.filter((item) => item.id !== id));
-    setAdminMessage("Article supprimé.");
-  };
-
-  const enregistrerProjet = (event) => {
-    event.preventDefault();
-    if (!projetForm.titre.trim() || !projetForm.objectif) return;
-
-    const projet = {
-      ...projetForm,
-      id: projetForm.id || Date.now(),
-      titre: projetForm.titre.trim(),
-      description: projetForm.description.trim(),
-      objectif: Number(projetForm.objectif),
-      collecte: projetForm.id
-        ? Number(projets.find((p) => p.id === projetForm.id)?.collecte || 0)
-        : 0,
-    };
-
-    setProjets((liste) =>
-      projetForm.id
-        ? liste.map((item) => (item.id === projetForm.id ? projet : item))
-        : [projet, ...liste]
-    );
-
-    setProjetForm({
-      id: null,
-      titre: "",
-      description: "",
-      objectif: "",
-      image: "",
-      actif: true,
-    });
-    setAdminMessage("Projet enregistré.");
-  };
-
-  const soutenirProjet = (id, montant) => {
-    const valeur = Number(montant);
-    if (!Number.isFinite(valeur) || valeur <= 0) return;
-    setProjets((liste) =>
-      liste.map((p) => (p.id === id ? { ...p, collecte: Number(p.collecte || 0) + valeur } : p))
-    );
-  };
-
-  const enregistrerLeader = (event) => {
-    event.preventDefault();
-    setLeaderMois({
-      ...leaderForm,
-      nom: leaderForm.nom.trim(),
-      presentation: leaderForm.presentation.trim(),
-    });
-    setAdminMessage("Jeune leader du mois mis à jour.");
-  };
-
-  // --- Logique Espace Jeunes ---
-  const creerCompteJeune = (event) => {
-    event.preventDefault();
-    const { nom, telephone, email, ville, motDePasse: mdp, confirmation } = compteJeune;
-
-    if (!nom.trim() || !telephone.trim() || !email.trim() || !ville.trim() || !mdp.trim()) {
-      setMessageEspaceJeune("Veuillez remplir tous les champs obligatoires.");
-      return;
-    }
-
-    if (mdp !== confirmation) {
-      setMessageEspaceJeune("Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    if (comptesJeunes.some((c) => c.email.toLowerCase() === email.trim().toLowerCase())) {
-      setMessageEspaceJeune("Un compte existe déjà avec cet e-mail.");
-      return;
-    }
-
-    const matricule = genererMatricule(nom);
-    const nouveauCompte = {
-      id: Date.now(),
-      nom: nom.trim(),
-      telephone: telephone.trim(),
-      email: email.trim(),
-      ville: ville.trim(),
-      motDePasse: mdp,
-      matricule,
-      commandes: [],
-      requetes: [],
-    };
-
-    setComptesJeunes((liste) => [...liste, nouveauCompte]);
-    setJeuneConnecte(nouveauCompte);
-    setCompteJeune(compteJeuneInitial);
-    setMessageEspaceJeune("");
-  };
-
-  const connecterJeune = (event) => {
-    event.preventDefault();
-    const compte = comptesJeunes.find(
-      (c) => c.email.toLowerCase() === connexionJeune.email.trim().toLowerCase()
-    );
-
-    if (!compte || compte.motDePasse !== connexionJeune.motDePasse) {
-      setMessageEspaceJeune("E-mail ou mot de passe incorrect.");
-      return;
-    }
-
-    setJeuneConnecte(compte);
-    setConnexionJeune(connexionJeuneInitiale);
-    setMessageEspaceJeune("");
-  };
-
-  const deconnecterJeune = () => {
-    setJeuneConnecte(null);
-    setModeEspaceJeune("connexion");
-    setMessageEspaceJeune("");
-  };
-
-  const soumettreRequeteJeune = (event) => {
-    event.preventDefault();
-    const form = new FormData(event.target);
-    const texte = (form.get("requete") || "").toString().trim();
-    if (!texte || !jeuneConnecte) return;
-
-    const requete = { id: Date.now(), texte, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" };
-
-    setComptesJeunes((liste) =>
-      liste.map((c) =>
-        c.id === jeuneConnecte.id ? { ...c, requetes: [requete, ...(c.requetes || [])] } : c
-      )
-    );
-    setJeuneConnecte((session) => ({ ...session, requetes: [requete, ...(session.requetes || [])] }));
-    event.target.reset();
-  };
-
-  // --- Logique Espace Responsable ---
-  const creerCompteResponsable = (event) => {
-    event.preventDefault();
-    const { nom, telephone, email, ville, responsabilite, motDePasse: mdp, confirmation } = compteResponsable;
-
-    if (!nom.trim() || !telephone.trim() || !email.trim() || !ville.trim() || !mdp.trim()) {
-      setMessageEspaceResponsable("Veuillez remplir tous les champs obligatoires.");
-      return;
-    }
-
-    if (mdp !== confirmation) {
-      setMessageEspaceResponsable("Les mots de passe ne correspondent pas.");
-      return;
-    }
-
-    if (comptesResponsables.some((c) => c.email.toLowerCase() === email.trim().toLowerCase())) {
-      setMessageEspaceResponsable("Un compte existe déjà avec cet e-mail.");
-      return;
-    }
-
-    const nouveauCompte = {
-      id: Date.now(),
-      nom: nom.trim(),
-      telephone: telephone.trim(),
-      email: email.trim(),
-      ville: ville.trim(),
-      responsabilite: responsabilite.trim(),
-      motDePasse: mdp,
-      soumissions: [],
-      commandes: [],
-    };
-
-    setComptesResponsables((liste) => [...liste, nouveauCompte]);
-    setResponsableConnecte(nouveauCompte);
-    setCompteResponsable(compteResponsableInitial);
-    setMessageEspaceResponsable("");
-  };
-
-  const connecterResponsable = (event) => {
-    event.preventDefault();
-    const compte = comptesResponsables.find(
-      (c) => c.email.toLowerCase() === connexionResponsable.email.trim().toLowerCase()
-    );
-
-    if (!compte || compte.motDePasse !== connexionResponsable.motDePasse) {
-      setMessageEspaceResponsable("E-mail ou mot de passe incorrect.");
-      return;
-    }
-
-    setResponsableConnecte(compte);
-    setConnexionResponsable(connexionResponsableInitiale);
-    setMessageEspaceResponsable("");
-  };
-
-  const deconnecterResponsable = () => {
-    setResponsableConnecte(null);
-    setModeEspaceResponsable("connexion");
-    setMessageEspaceResponsable("");
-  };
-
-  const soumettreProjetResponsable = (event) => {
-    event.preventDefault();
-    const form = new FormData(event.target);
-    const titre = (form.get("titre") || "").toString().trim();
-    const description = (form.get("description") || "").toString().trim();
-    if (!titre || !responsableConnecte) return;
-
-    const soumission = { id: Date.now(), titre, description, date: new Date().toLocaleDateString("fr-FR"), statut: "EN ATTENTE" };
-
-    setComptesResponsables((liste) =>
-      liste.map((c) =>
-        c.id === responsableConnecte.id ? { ...c, soumissions: [soumission, ...(c.soumissions || [])] } : c
-      )
-    );
-    setResponsableConnecte((session) => ({ ...session, soumissions: [soumission, ...(session.soumissions || [])] }));
-    event.target.reset();
-  };
-
-  // --- Logique Espace Gérant ---
-  const connecterGerant = () => {
-    if (motDePasseGerant === "GERANT2026") {
-      setGerantConnecte(true);
-      setErreurGerant("");
-      setMotDePasseGerant("");
+    if (jeuneConnecte) {
+      majProfilJeune({ commandes: majCommandes });
     } else {
-      setErreurGerant("Mot de passe gérant incorrect.");
+      majProfilResponsable({ commandes: majCommandes });
     }
   };
 
-  const deconnecterGerant = () => {
-    setGerantConnecte(false);
-    setErreurGerant("");
-    setMessageGerant("");
+  const genererRecuPDF_A4 = (cmd, compte) => {
+    const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+    doc.setFillColor(84, 32, 168);
+    doc.rect(0, 0, 210, 40, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.text("JADCI — REÇU DE PAIEMENT OFFICIEL", 15, 22);
+    doc.setFontSize(11);
+    doc.text("Jeunesse des Assemblées de Dieu de Côte d'Ivoire", 15, 30);
+
+    doc.setTextColor(17, 24, 39);
+    doc.setFontSize(11);
+
+    doc.text(`Acheteur / Client : ${compte.nom}`, 15, 55);
+    doc.text(`Matricule unique : ${compte.matricule}`, 15, 63);
+    doc.text(`Téléphone : ${compte.telephone}`, 15, 71);
+    doc.text(`Email : ${compte.email}`, 15, 79);
+
+    doc.text(`Référence Commande : ${cmd.ref || "CMD-" + cmd.id}`, 120, 55);
+    doc.text(`Code Unique Reçu : ${cmd.codeRecu}`, 120, 63);
+    doc.text(`Date de Paiement : ${cmd.datePaiement}`, 120, 71);
+    doc.text(`Statut : ${cmd.statut}`, 120, 79);
+
+    doc.line(15, 87, 195, 87);
+
+    doc.setFontSize(12);
+    doc.text("Désignation des Articles", 15, 97);
+    doc.text("Qté", 120, 97);
+    doc.text("Prix Unitaire", 145, 97);
+    doc.text("Total", 175, 97);
+
+    doc.line(15, 101, 195, 101);
+
+    let y = 111;
+    doc.setFontSize(11);
+    (cmd.articles || []).forEach((art) => {
+      doc.text(art.nom, 15, y);
+      doc.text(String(art.quantite), 122, y);
+      doc.text(`${art.prix.toLocaleString("fr-FR")} FCFA`, 145, y);
+      doc.text(`${(art.prix * art.quantite).toLocaleString("fr-FR")} FCFA`, 175, y);
+      y += 8;
+    });
+
+    doc.line(15, y, 195, y);
+    y += 12;
+
+    doc.setFontSize(14);
+    doc.text(`MONTANT TOTAL PAYÉ : ${cmd.total.toLocaleString("fr-FR")} FCFA`, 15, y);
+
+    doc.save(`Recu_JADCI_${cmd.codeRecu}.pdf`);
   };
 
-  const supprimerAnnonceGerant = (index) => {
-    setAnnonces((liste) => liste.filter((_, i) => i !== index));
-    setMessageGerant("Annonce supprimée.");
+  /* ================================================================== */
+  /* REQUÊTES & PROJETS */
+  /* ================================================================== */
+
+  const soumettreRequete = (e, typeRequete) => {
+    e.preventDefault();
+    const compteActif = jeuneConnecte || responsableConnecte;
+    if (!compteActif) return;
+
+    const form = new FormData(e.target);
+    const nouvelleRequete = {
+      id: Date.now(),
+      compte_id: compteActif.id,
+      compte_nom: compteActif.nom,
+      compte_matricule: compteActif.matricule,
+      type: typeRequete,
+      titre: form.get("titre").toString().trim(),
+      description: form.get("description").toString().trim(),
+      dateCreation: new Date().toLocaleDateString("fr-FR"),
+      statut: "SOUMISE",
+    };
+
+    setRequetes((prev) => [...prev, nouvelleRequete]);
+    e.target.reset();
+    setMessageEspace("Requête soumise avec succès.");
   };
 
-  const supprimerProduitGerant = (id) => {
-    setProduits((liste) => liste.filter((item) => item.id !== id));
-    setMessageGerant("Produit supprimé.");
+  const soumettreProjet = (e) => {
+    e.preventDefault();
+    const compteActif = jeuneConnecte || responsableConnecte;
+    if (!compteActif) return;
+
+    const form = new FormData(e.target);
+    const nouveauProjet = {
+      id: Date.now(),
+      compte_id: compteActif.id,
+      compte_nom: compteActif.nom,
+      compte_matricule: compteActif.matricule,
+      titre: form.get("titre").toString().trim(),
+      description: form.get("description").toString().trim(),
+      objectifs: form.get("objectifs").toString().trim(),
+      budget: Number(form.get("budget")) || 0,
+      dateDebutProvisoire: form.get("dateDebut").toString().trim(),
+      dateCreation: new Date().toLocaleDateString("fr-FR"),
+      statut: "EN ATTENTE",
+    };
+
+    setProjets((prev) => [...prev, nouveauProjet]);
+    e.target.reset();
+    setMessageEspace("Projet soumis avec succès.");
   };
 
-  const eglisesFiltrees = eglises.filter((eglise) => !eglise.statut || eglise.statut === "VALIDÉE").filter((eglise) => {
-    const recherche = rechercheEglise.toLowerCase().trim();
+  /* ================================================================== */
+  /* ADMINISTRATION */
+  /* ================================================================== */
 
-    if (!recherche) return true;
+  const connecterAdmin = (e) => {
+    e.preventDefault();
+    const identifiant = identifiantAdminInput.trim();
+    const mdp = motDePasseAdminInput;
 
-    return (
-      eglise.nom.toLowerCase().includes(recherche) ||
-      eglise.ville.toLowerCase().includes(recherche) ||
-      eglise.commune.toLowerCase().includes(recherche) ||
-      eglise.quartier.toLowerCase().includes(recherche) ||
-      eglise.pasteur.toLowerCase().includes(recherche)
-    );
-  });
-
-  const styles = {
-    app: {
-      minHeight: "100vh",
-      background: "linear-gradient(180deg, #ffffff 0%, #f8f7ff 100%)",
-      color: "#111827",
-      fontFamily:
-        "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    },
-    header: {
-      background: "#ffffff",
-      borderBottom: "1px solid #e5e7eb",
-      position: "sticky",
-      top: 0,
-      zIndex: 100,
-    },
-    headerInner: {
-      maxWidth: "1450px",
-      margin: "0 auto",
-      padding: "12px 28px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "25px",
-    },
-    brand: {
-      display: "flex",
-      alignItems: "center",
-      gap: "13px",
-      minWidth: 0,
-    },
-    brandLogo: {
-      width: "64px",
-      height: "64px",
-      objectFit: "contain",
-      flexShrink: 0,
-    },
-    brandTitle: {
-      margin: 0,
-      color: "#5420a8",
-      fontSize: "28px",
-      fontWeight: 900,
-    },
-    brandSubtitle: {
-      margin: "3px 0 0",
-      color: "#64748b",
-      fontSize: "13px",
-    },
-    nav: {
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "flex-end",
-      gap: "5px",
-      flexWrap: "wrap",
-    },
-    navButton: (active) => ({
-      border: "none",
-      borderRadius: "10px",
-      padding: "12px 15px",
-      background: active ? "#2456d8" : "transparent",
-      color: active ? "#ffffff" : "#172033",
-      fontSize: "14px",
-      fontWeight: 850,
-      cursor: "pointer",
-      transition: "all .2s ease",
-    }),
-    announcement: {
-      background: "linear-gradient(90deg, #4e2096, #6428c7)",
-      color: "#ffffff",
-      display: "flex",
-      minHeight: "50px",
-    },
-    announcementTitle: {
-      background: "#2456d8",
-      padding: "0 30px",
-      display: "flex",
-      alignItems: "center",
-      fontWeight: 900,
-      fontSize: "15px",
-      whiteSpace: "nowrap",
-    },
-    announcementText: {
-      flex: 1,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "10px 20px",
-      fontSize: "15px",
-      fontWeight: 700,
-      textAlign: "center",
-    },
-    main: {
-      maxWidth: "1450px",
-      margin: "0 auto",
-      padding: "55px 32px 80px",
-    },
-    hero: {
-      position: "relative",
-      overflow: "hidden",
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1.05fr) minmax(380px, .95fr)",
-      alignItems: "center",
-      gap: "60px",
-      minHeight: "620px",
-      marginBottom: "80px",
-      borderRadius: "35px",
-      padding: "40px",
-    },
-    heroBackgroundLayer: (url, actif) => ({
-      position: "absolute",
-      inset: 0,
-      backgroundImage: `linear-gradient(180deg, rgba(15,10,35,.72), rgba(15,10,35,.86)), url(${url})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-      opacity: actif ? 1 : 0,
-      transition: "opacity 1.8s ease-in-out",
-      zIndex: 0,
-    }),
-    heroContent: {
-      position: "relative",
-      zIndex: 1,
-    },
-    badge: {
-      display: "inline-flex",
-      padding: "9px 16px",
-      borderRadius: "999px",
-      background: "rgba(241,234,255,.15)",
-      border: "1px solid rgba(223,208,255,.35)",
-      color: "#e9d8ff",
-      fontWeight: 850,
-      fontSize: "14px",
-      marginBottom: "22px",
-    },
-    heroTitle: {
-      margin: 0,
-      color: "#ffffff",
-      fontSize: "clamp(44px, 5.5vw, 76px)",
-      lineHeight: 1,
-      letterSpacing: "-3px",
-      fontWeight: 950,
-    },
-    purple: { color: "#c9a8ff" },
-    heroText: {
-      maxWidth: "700px",
-      margin: "28px 0",
-      color: "rgba(255,255,255,.82)",
-      fontSize: "19px",
-      lineHeight: 1.7,
-    },
-    heroActions: {
-      display: "flex",
-      gap: "12px",
-      flexWrap: "wrap",
-    },
-    button: {
-      border: "none",
-      borderRadius: "11px",
-      padding: "14px 20px",
-      background: "#2456d8",
-      color: "#ffffff",
-      fontWeight: 800,
-      fontSize: "15px",
-      cursor: "pointer",
-      boxShadow: "0 10px 24px rgba(37,86,216,.18)",
-    },
-    secondaryButton: {
-      border: "1px solid #d8c7ff",
-      borderRadius: "11px",
-      padding: "13px 20px",
-      background: "#ffffff",
-      color: "#5420a8",
-      fontWeight: 800,
-      fontSize: "15px",
-      cursor: "pointer",
-    },
-    heroCard: {
-      position: "relative",
-      zIndex: 1,
-      animation: "heroFloat 7s ease-in-out infinite",
-      minHeight: "530px",
-      borderRadius: "35px",
-      padding: "40px 30px",
-      background:
-        "linear-gradient(145deg, #5420a8 0%, #702bd0 50%, #2456d8 100%)",
-      color: "#ffffff",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "center",
-      textAlign: "center",
-      overflow: "hidden",
-      boxShadow: "0 30px 70px rgba(79,32,150,.22)",
-    },
-    heroLogoCircle: {
-      animation: "logoFloat 4.5s ease-in-out infinite",
-      width: "235px",
-      height: "235px",
-      borderRadius: "50%",
-      background: "#ffffff",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "17px",
-      boxSizing: "border-box",
-      boxShadow: "0 20px 45px rgba(0,0,0,.18)",
-      marginBottom: "30px",
-    },
-    heroLogo: {
-      width: "100%",
-      height: "100%",
-      objectFit: "contain",
-    },
-    heroCardText: {
-      maxWidth: "500px",
-      margin: 0,
-      fontSize: "27px",
-      lineHeight: 1.25,
-      fontWeight: 850,
-    },
-    heroMission: {
-      marginTop: "18px",
-      color: "#fde047",
-      fontSize: "19px",
-      fontWeight: 900,
-    },
-    mediaHero: {
-      position: "relative",
-      overflow: "hidden",
-      borderRadius: "30px",
-      padding: "55px 45px",
-      background: "linear-gradient(135deg, #17133b 0%, #5420a8 52%, #2456d8 100%)",
-      boxShadow: "0 30px 70px rgba(36,86,216,.18)",
-      minHeight: "300px",
-      display: "flex",
-      alignItems: "center",
-    },
-    mediaCover: {
-      minHeight: "170px",
-      borderRadius: "17px",
-      background: "linear-gradient(135deg, #17133b, #6428c7, #2456d8)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "15px",
-      padding: "22px",
-      color: "#fff",
-      position: "relative",
-      overflow: "hidden",
-    },
-    mediaCoverRing: {
-      width: "92px",
-      height: "92px",
-      borderRadius: "50%",
-      background: "rgba(255,255,255,.96)",
-      padding: "10px",
-      boxSizing: "border-box",
-      display: "grid",
-      placeItems: "center",
-      animation: "logoFloat 4s ease-in-out infinite",
-    },
-    homeMediaStrip: {
-      borderRadius: "26px",
-      padding: "35px",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: "25px",
-      flexWrap: "wrap",
-      background: "linear-gradient(120deg, #5420a8, #2456d8)",
-      boxShadow: "0 20px 50px rgba(79,32,150,.16)",
-    },
-    section: { marginBottom: "70px" },
-    sectionHeader: { maxWidth: "800px", marginBottom: "30px" },
-    sectionTitle: {
-      margin: 0,
-      color: "#172554",
-      fontSize: "clamp(28px, 4vw, 43px)",
-      fontWeight: 900,
-      letterSpacing: "-1px",
-    },
-    sectionText: {
-      color: "#64748b",
-      fontSize: "17px",
-      lineHeight: 1.7,
-      margin: "10px 0 0",
-    },
-    cards: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(235px, 1fr))",
-      gap: "18px",
-    },
-    card: {
-      background: "#ffffff",
-      border: "1px solid #e8e3f3",
-      borderRadius: "20px",
-      padding: "25px",
-      boxShadow: "0 12px 35px rgba(30,41,59,.055)",
-    },
-    cardTitle: {
-      margin: "0 0 9px",
-      color: "#172554",
-      fontSize: "19px",
-      fontWeight: 850,
-    },
-    cardText: {
-      margin: "0 0 18px",
-      color: "#64748b",
-      lineHeight: 1.6,
-    },
-    adminBox: {
-      background: "#ffffff",
-      borderRadius: "25px",
-      border: "1px solid #e3d8f8",
-      padding: "30px",
-      boxShadow: "0 20px 55px rgba(76,29,149,.07)",
-    },
-    input: {
-      width: "100%",
-      boxSizing: "border-box",
-      padding: "13px 15px",
-      border: "1px solid #d4d9e5",
-      borderRadius: "10px",
-      fontSize: "15px",
-      marginTop: "7px",
-      marginBottom: "15px",
-      outline: "none",
-      fontFamily: "inherit",
-      background: "#fff",
-    },
-    label: {
-      display: "block",
-      color: "#334155",
-      fontSize: "14px",
-      fontWeight: 750,
-      marginBottom: "3px",
-    },
-    tableWrapper: { overflowX: "auto" },
-    table: {
-      width: "100%",
-      minWidth: "750px",
-      borderCollapse: "collapse",
-      marginTop: "15px",
-    },
-    th: {
-      textAlign: "left",
-      padding: "13px",
-      background: "#f1efff",
-      color: "#312e81",
-      borderBottom: "1px solid #ddd6fe",
-      fontSize: "13px",
-    },
-    td: {
-      padding: "13px",
-      borderBottom: "1px solid #e8e8ef",
-      color: "#475569",
-      fontSize: "14px",
-    },
-    footer: {
-      background: "#151a35",
-      color: "#ffffff",
-      textAlign: "center",
-      padding: "50px 25px",
-    },
-    footerLogo: {
-      width: "75px",
-      height: "75px",
-      objectFit: "contain",
-      background: "#ffffff",
-      borderRadius: "50%",
-      padding: "5px",
-      marginBottom: "14px",
-    },
-    espaceCard: (couleur) => ({
-      background: "#ffffff",
-      border: `1px solid ${couleur}33`,
-      borderRadius: "24px",
-      padding: "30px",
-      boxShadow: "0 16px 40px rgba(30,41,59,.06)",
-      display: "flex",
-      flexDirection: "column",
-      gap: "14px",
-    }),
-    espaceIcone: (couleur) => ({
-      width: "58px",
-      height: "58px",
-      borderRadius: "16px",
-      background: `${couleur}1f`,
-      display: "grid",
-      placeItems: "center",
-      fontSize: "26px",
-      marginBottom: "4px",
-    }),
-    espaceBadge: (couleur) => ({
-      display: "inline-block",
-      alignSelf: "flex-start",
-      padding: "5px 12px",
-      borderRadius: "999px",
-      background: `${couleur}1a`,
-      color: couleur,
-      fontSize: "12px",
-      fontWeight: 900,
-      letterSpacing: ".4px",
-    }),
-  };
-
-  const renderAccueil = () => (
-    <>
-      <section style={styles.hero}>
-        {heroBackgrounds.map((url, i) => (
-          <div key={url} style={styles.heroBackgroundLayer(url, i === indexFond)} />
-        ))}
-
-        <div style={styles.heroContent}>
-          <div style={styles.badge}>PLATEFORME OFFICIELLE JADCI</div>
-
-          <h1 className="reveal reveal-delay-1" style={styles.heroTitle}>
-            Ensemble pour
-            <br />
-            une <span className="gradient-text" style={styles.purple}>jeunesse engagée</span>
-          </h1>
-
-          <p className="reveal reveal-delay-2" style={styles.heroText}>
-            Bienvenue sur la plateforme numérique de la Jeunesse des
-            Assemblées de Dieu de Côte d’Ivoire. Un espace institutionnel
-            pour connecter, accompagner et servir la jeunesse.
-          </p>
-
-          <div className="reveal reveal-delay-3" style={styles.heroActions}>
-            <button style={styles.button} onClick={() => aller("portail")}>
-              ACCÉDER AU PORTAIL
-            </button>
-            <button
-              style={styles.secondaryButton}
-              onClick={() => aller("boutique")}
-            >
-              DÉCOUVRIR LA BOUTIQUE
-            </button>
-          </div>
-        </div>
-
-        <div style={styles.heroCard}>
-          <span className="hero-orbit hero-orbit-1" />
-          <span className="hero-orbit hero-orbit-2" />
-          <span className="hero-spark spark-1" />
-          <span className="hero-spark spark-2" />
-          <span className="hero-spark spark-3" />
-          <div style={styles.heroLogoCircle}>
-            <img src={logoJadci} alt="Logo JADCI" style={styles.heroLogo} />
-          </div>
-
-          <p style={styles.heroCardText}>
-            JEUNESSE DES ASSEMBLÉES
-            <br />
-            DE DIEU DE CÔTE D’IVOIRE
-          </p>
-
-          <div style={styles.heroMission}>FOI • SERVICE • MISSION</div>
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>
-            UNE PLATEFORME AU SERVICE DE LA JEUNESSE
-          </h2>
-          <p style={styles.sectionText}>
-            Retrouvez les principaux services de la JADCI dans un même
-            espace.
-          </p>
-        </div>
-
-        <div style={styles.cards}>
-          {[
-            [
-              "ESPACE JEUNE",
-              "Inscription, profil, matricule, CV, photo et carte jeune JADCI.",
-              "espaces",
-            ],
-            [
-              "RESPONSABLES RÉGIONAUX",
-              "Gestion des églises, projets, propositions et informations régionales.",
-              "espaces",
-            ],
-            [
-              "ÉGLISES",
-              "Consultez les églises enregistrées et recherchez une assemblée.",
-              "eglises",
-            ],
-            [
-              "BOUTIQUE JADCI",
-              "Livres, vêtements, gadgets et carte jeune.",
-              "boutique",
-            ],
-          ].map(([titre, texte, destination]) => (
-            <div className="interactive-card reveal-card" style={styles.card} key={titre}>
-              <h3 style={styles.cardTitle}>{titre}</h3>
-              <p style={styles.cardText}>{texte}</p>
-              <button
-                style={styles.button}
-                onClick={() => aller(destination)}
-              >
-                CONSULTER
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div className="home-media-strip">
-          <div>
-            <span className="live-badge">● NOUVEAU</span>
-            <h2 style={{ margin: "14px 0 8px", color: "#fff", fontSize: "clamp(28px, 4vw, 44px)" }}>
-              Suivez les directs et les prédications JADCI
-            </h2>
-            <p style={{ margin: 0, color: "rgba(255,255,255,.78)", lineHeight: 1.7, maxWidth: "720px" }}>
-              Une nouvelle rubrique média pour centraliser les cultes en direct, enseignements, événements et contenus vidéo.
-            </p>
-          </div>
-          <button type="button" style={styles.button} onClick={() => aller("medias")}>
-            OUVRIR L'ESPACE MÉDIA
-          </button>
-        </div>
-      </section>
-    </>
-  );
-
-  const renderPortail = () => {
-    if (!adminConnecte) {
-      return (
-        <section
-          style={{
-            ...styles.section,
-            maxWidth: "560px",
-            margin: "30px auto 70px",
-          }}
-        >
-          <div style={styles.adminBox}>
-            <div style={{ textAlign: "center", marginBottom: "25px" }}>
-              <img
-                src={logoJadci}
-                alt="Logo JADCI"
-                style={{
-                  width: "105px",
-                  height: "105px",
-                  objectFit: "contain",
-                }}
-              />
-            </div>
-
-            <h2 style={styles.sectionTitle}>PORTAIL ADMINISTRATEUR</h2>
-            <p style={styles.sectionText}>
-              Cet espace est réservé à l'administration générale de la JADCI.
-            </p>
-
-            <label style={styles.label}>MOT DE PASSE ADMINISTRATEUR</label>
-            <input
-              type="password"
-              value={motDePasse}
-              onChange={(event) => {
-                setMotDePasse(event.target.value);
-                if (erreur) setErreur("");
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") connexionAdmin();
-              }}
-              placeholder="Entrez votre mot de passe"
-              style={styles.input}
-              autoComplete="current-password"
-            />
-
-            {erreur && (
-              <p style={{ color: "#b91c1c", fontWeight: 700 }}>{erreur}</p>
-            )}
-
-            <button
-              style={{ ...styles.button, width: "100%" }}
-              onClick={connexionAdmin}
-            >
-              SE CONNECTER
-            </button>
-
-          </div>
-        </section>
-      );
+    const trouve = comptesAdmin.find((a) => a.matricule === identifiant && a.motDePasse === mdp);
+    if (!trouve) {
+      setErreurAdmin("Matricule ou mot de passe Administrateur incorrect.");
+      return;
     }
-
-    const demandesEnAttente = demandes.filter(
-      (demande) => demande.statut === "EN ATTENTE"
-    ).length;
-
-    return (
-      <>
-        <section style={styles.section}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: "20px",
-              alignItems: "center",
-              flexWrap: "wrap",
-              marginBottom: "24px",
-            }}
-          >
-            <div>
-              <h2 style={styles.sectionTitle}>
-                TABLEAU DE BORD ADMINISTRATEUR
-              </h2>
-              <p style={styles.sectionText}>
-                Centre de gestion JADCI : demandes, églises, boutique,
-                contenus, projets, calendrier et médias.
-              </p>
-            </div>
-
-            <button
-              style={styles.secondaryButton}
-              onClick={() => {
-                setAdminConnecte(false);
-                setAdminTab("dashboard");
-                setErreur("");
-                setMotDePasse("");
-              }}
-            >
-              DÉCONNEXION
-            </button>
-          </div>
-
-          <div style={styles.cards}>
-            {[
-              ["DEMANDES EN ATTENTE", demandesEnAttente],
-              [
-                "ÉGLISES EN ATTENTE",
-                eglises.filter((e) => e.statut === "EN ATTENTE").length,
-              ],
-              ["PRODUITS BOUTIQUE", produits.length],
-              ["ARTICLES / ANNONCES", articles.length],
-              ["PROJETS", projets.length],
-              [
-                "STOCK TOTAL",
-                produits.reduce((t, p) => t + Number(p.stock || 0), 0),
-              ],
-            ].map(([titre, nombre]) => (
-              <div style={styles.card} key={titre}>
-                <h3 style={styles.cardTitle}>{titre}</h3>
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: "38px",
-                    color: "#2456d8",
-                  }}
-                >
-                  {nombre}
-                </strong>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section style={styles.section}>
-          <div style={styles.adminBox}>
-            <h3 style={{ ...styles.cardTitle, fontSize: "25px" }}>
-              GESTION RAPIDE DES DEMANDES
-            </h3>
-
-            <div style={styles.tableWrapper}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    {[
-                      "TYPE",
-                      "NOM",
-                      "TÉLÉPHONE",
-                      "VILLE",
-                      "MATRICULE",
-                      "STATUT",
-                      "ACTION",
-                    ].map((h) => (
-                      <th style={styles.th} key={h}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {demandes.map((demande) => (
-                    <tr key={demande.id}>
-                      <td style={styles.td}>{demande.type}</td>
-                      <td style={styles.td}>{demande.nom}</td>
-                      <td style={styles.td}>{demande.telephone}</td>
-                      <td style={styles.td}>{demande.ville}</td>
-                      <td style={styles.td}>
-                        {demande.matricule || "—"}
-                      </td>
-                      <td style={styles.td}>
-                        <strong>{demande.statut}</strong>
-                      </td>
-                      <td style={styles.td}>
-                        {demande.statut === "EN ATTENTE" ? (
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "8px",
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            <button
-                              style={styles.button}
-                              onClick={() =>
-                                traiterDemande(demande.id, "VALIDÉE")
-                              }
-                            >
-                              VALIDER
-                            </button>
-
-                            <button
-                              style={{
-                                ...styles.secondaryButton,
-                                color: "#b91c1c",
-                                borderColor: "#fecaca",
-                              }}
-                              onClick={() =>
-                                traiterDemande(demande.id, "REFUSÉE")
-                              }
-                            >
-                              REFUSER
-                            </button>
-                          </div>
-                        ) : (
-                          "TRAITÉE"
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        {renderAdminGestion()}
-      </>
-    );
+    setAdminSession(trouve);
+    setErreurAdmin("");
+    setIdentifiantAdminInput("");
+    setMotDePasseAdminInput("");
+    setAdminTab("dashboard");
   };
 
-  const renderAdminGestion = () => (
-    <>
-      <section style={styles.section}>
-        <div style={styles.adminBox}>
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "22px" }}>
-            {[
-              ["dashboard", "VUE D'ENSEMBLE"],
-              ["eglises", "ÉGLISES"],
-              ["produits", "BOUTIQUE"],
-              ["editorial", "ANNONCES & ARTICLES"],
-              ["projets", "PROJETS"],
-              ["leader", "LEADER DU MOIS"],
-              ["calendrier", "CALENDRIER"],
-              ["direct", "DIRECTS & MÉDIAS"],
-            ].map(([tab, label]) => (
-              <button
-                key={tab}
-                type="button"
-                style={adminTab === tab ? styles.button : styles.secondaryButton}
-                onClick={() => setAdminTab(tab)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+  const exporterToutesDonneesExcel = () => {
+    const tJeunes = comptesJeunes.map((j) => ({
+      Matricule: j.matricule,
+      Nom: j.nom,
+      Telephone: j.telephone,
+      Email: j.email,
+      Genre: j.genre,
+      Ivoirien: j.nationaliteIvoirienne ? "Oui" : "Non",
+      Creation: j.dateCreation,
+    }));
 
-          {adminMessage && (
-            <div className="admin-success" style={{ marginBottom: "20px" }}>
-              {adminMessage}
-            </div>
-          )}
+    const tResponsables = comptesResponsables.map((r) => ({
+      Matricule: r.matricule,
+      Nom: r.nom,
+      Telephone: r.telephone,
+      Email: r.email,
+      Genre: r.genre,
+      Ivoirien: r.nationaliteIvoirienne ? "Oui" : "Non",
+      Creation: r.dateCreation,
+    }));
 
-          {adminTab === "eglises" && (
-            <div>
-              <h3 style={styles.cardTitle}>MODÉRATION DES ÉGLISES</h3>
-              <p style={styles.sectionText}>
-                Les nouvelles églises arrivent en « EN ATTENTE ». Elles ne sont publiées au public qu'après validation.
-              </p>
-              <div style={styles.tableWrapper}>
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      {["ÉGLISE", "PASTEUR", "VILLE", "STATUT", "ACTIONS"].map((h) => (
-                        <th style={styles.th} key={h}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {eglises.map((eglise) => (
-                      <tr key={eglise.id}>
-                        <td style={styles.td}>{eglise.nom}</td>
-                        <td style={styles.td}>{eglise.pasteur}</td>
-                        <td style={styles.td}>{eglise.ville}</td>
-                        <td style={styles.td}><strong>{eglise.statut || "EN ATTENTE"}</strong></td>
-                        <td style={styles.td}>
-                          <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
-                            <button type="button" style={styles.button} onClick={() => modifierStatutEglise(eglise.id, "VALIDÉE")}>VALIDER</button>
-                            <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => modifierStatutEglise(eglise.id, "REFUSÉE")}>REJETER</button>
-                            <button type="button" style={styles.secondaryButton} onClick={() => modifierStatutEglise(eglise.id, "EN ATTENTE")}>REMETTRE EN ATTENTE</button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+    const tCommandes = [];
+    [...comptesJeunes, ...comptesResponsables].forEach((c) => {
+      (c.commandes || []).forEach((cmd) => {
+        tCommandes.push({
+          CompteMat: c.matricule,
+          CompteNom: c.nom,
+          RefCommande: cmd.ref,
+          Total: cmd.total,
+          Statut: cmd.statut,
+          DateCommande: cmd.date,
+          DatePaiement: cmd.datePaiement || "N/A",
+          CodeRecu: cmd.codeRecu || "N/A",
+        });
+      });
+    });
 
-          {adminTab === "produits" && (
-            <div>
-              <h3 style={styles.cardTitle}>GESTION DE LA BOUTIQUE</h3>
-              <form onSubmit={enregistrerProduit}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
-                  <div><label style={styles.label}>NOM *</label><input style={styles.input} value={produitForm.nom} onChange={(e) => setProduitForm((p) => ({ ...p, nom: e.target.value }))} /></div>
-                  <div>
-                    <label style={styles.label}>NATURE *</label>
-                    <select style={styles.input} value={produitForm.nature} onChange={(e) => setProduitForm((p) => ({ ...p, nature: e.target.value }))}>
-                      <option>LIVRES</option><option>VÊTEMENTS</option><option>GADGETS</option><option>SERVICES</option><option>AUTRE</option>
-                    </select>
-                  </div>
-                  <div><label style={styles.label}>PRIX (FCFA) *</label><input type="number" min="0" style={styles.input} value={produitForm.prix} onChange={(e) => setProduitForm((p) => ({ ...p, prix: e.target.value }))} /></div>
-                  <div><label style={styles.label}>STOCK</label><input type="number" min="0" style={styles.input} value={produitForm.stock} onChange={(e) => setProduitForm((p) => ({ ...p, stock: e.target.value }))} /></div>
-                  <div><label style={styles.label}>APPRÉCIATION / 5</label><input type="number" min="0" max="5" step="0.1" style={styles.input} value={produitForm.appreciation} onChange={(e) => setProduitForm((p) => ({ ...p, appreciation: e.target.value }))} /></div>
-                  <div><label style={styles.label}>IMAGE (URL)</label><input style={styles.input} value={produitForm.image} onChange={(e) => setProduitForm((p) => ({ ...p, image: e.target.value }))} placeholder="https://..." /></div>
-                </div>
-                <label style={styles.label}>DESCRIPTION</label>
-                <textarea style={{ ...styles.input, minHeight: "100px", resize: "vertical" }} value={produitForm.description} onChange={(e) => setProduitForm((p) => ({ ...p, description: e.target.value }))} />
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <button type="submit" style={styles.button}>{produitForm.id ? "MODIFIER LE PRODUIT" : "ENREGISTRER LE PRODUIT"}</button>
-                  {produitForm.id && <button type="button" style={styles.secondaryButton} onClick={() => setProduitForm({ id: null, nom: "", nature: "LIVRES", categorie: "LIVRES", prix: "", description: "", stock: 0, appreciation: 5, image: "" })}>ANNULER</button>}
-                </div>
-              </form>
+    const tRequetes = requetes.map((r) => ({
+      CompteMat: r.compte_matricule,
+      CompteNom: r.compte_nom,
+      Type: r.type,
+      Titre: r.titre,
+      Statut: r.statut,
+      DateCreation: r.dateCreation,
+    }));
 
-              <div style={{ marginTop: "28px" }}>
-                <div style={styles.tableWrapper}>
-                  <table style={styles.table}>
-                    <thead><tr>{["PRODUIT", "NATURE", "PRIX", "STOCK", "NOTE", "ACTIONS"].map((h) => <th style={styles.th} key={h}>{h}</th>)}</tr></thead>
-                    <tbody>
-                      {produits.map((p) => (
-                        <tr key={p.id}>
-                          <td style={styles.td}>{p.nom}</td>
-                          <td style={styles.td}>{p.nature || p.categorie}</td>
-                          <td style={styles.td}>{Number(p.prix).toLocaleString("fr-FR")} FCFA</td>
-                          <td style={styles.td}>{p.stock ?? 0}</td>
-                          <td style={styles.td}>{"★".repeat(Math.round(p.appreciation || 0))}</td>
-                          <td style={styles.td}>
-                            <div style={{ display: "flex", gap: "7px", flexWrap: "wrap" }}>
-                              <button type="button" style={styles.secondaryButton} onClick={() => setProduitForm({ ...p, nature: p.nature || p.categorie, prix: p.prix, stock: p.stock ?? 0, appreciation: p.appreciation ?? 5, image: p.image || "" })}>MODIFIER</button>
-                              <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerProduit(p.id)}>SUPPRIMER</button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
+    const tProjets = projets.map((p) => ({
+      CompteMat: p.compte_matricule,
+      CompteNom: p.compte_nom,
+      Titre: p.titre,
+      Budget: p.budget,
+      Statut: p.statut,
+      DateCreation: p.dateCreation,
+    }));
 
-          {adminTab === "editorial" && (
-            <div>
-              <h3 style={styles.cardTitle}>RÉDACTION — ANNONCES & ARTICLES</h3>
-              <form onSubmit={enregistrerArticle}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
-                  <div><label style={styles.label}>TITRE *</label><input style={styles.input} value={articleForm.titre} onChange={(e) => setArticleForm((a) => ({ ...a, titre: e.target.value }))} /></div>
-                  <div><label style={styles.label}>CATÉGORIE</label><input style={styles.input} value={articleForm.categorie} onChange={(e) => setArticleForm((a) => ({ ...a, categorie: e.target.value }))} /></div>
-                  <div><label style={styles.label}>IMAGE (URL)</label><input style={styles.input} value={articleForm.image} onChange={(e) => setArticleForm((a) => ({ ...a, image: e.target.value }))} placeholder="https://..." /></div>
-                  <div><label style={styles.label}>DATE DE PUBLICATION</label><input type="date" style={styles.input} value={articleForm.datePublication} onChange={(e) => setArticleForm((a) => ({ ...a, datePublication: e.target.value }))} /></div>
-                  <div><label style={styles.label}>DATE DU PROGRAMME</label><input type="date" style={styles.input} value={articleForm.dateEvenement} onChange={(e) => setArticleForm((a) => ({ ...a, dateEvenement: e.target.value }))} /></div>
-                </div>
-                <label style={styles.label}>ARTICLE *</label>
-                <textarea style={{ ...styles.input, minHeight: "180px", resize: "vertical" }} value={articleForm.contenu} onChange={(e) => setArticleForm((a) => ({ ...a, contenu: e.target.value }))} />
-                <button type="submit" style={styles.button}>{articleForm.id ? "MODIFIER L'ARTICLE" : "PUBLIER L'ARTICLE"}</button>
-              </form>
+    const tEglises = eglises.map((e) => ({
+      Nom: e.nom,
+      Pasteur: e.pasteur,
+      Telephone: e.telephone,
+      Ville: e.ville,
+      Commune: e.commune,
+      Statut: e.statut,
+    }));
 
-              <div style={{ marginTop: "25px" }}>
-                {articles.map((article) => (
-                  <article className="interactive-card" key={article.id} style={{ ...styles.card, marginBottom: "12px" }}>
-                    {article.image && <img src={article.image} alt="" style={{ width: "100%", maxHeight: "220px", objectFit: "cover", borderRadius: "14px", marginBottom: "14px" }} />}
-                    <div style={{ color: "#64748b", fontSize: "13px", fontWeight: 800 }}>{article.categorie} • {article.datePublication}{article.dateEvenement ? ` • Programme : ${article.dateEvenement}` : ""}</div>
-                    <h4 style={{ ...styles.cardTitle, marginTop: "8px" }}>{article.titre}</h4>
-                    <p style={styles.cardText}>{article.contenu}</p>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                      <button type="button" style={styles.secondaryButton} onClick={() => setArticleForm(article)}>MODIFIER</button>
-                      <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerArticle(article.id)}>SUPPRIMER</button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {adminTab === "projets" && (
-            <div>
-              <h3 style={styles.cardTitle}>PROJETS — SOUTIEN LIBRE</h3>
-              <form onSubmit={enregistrerProjet}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
-                  <div><label style={styles.label}>NOM DU PROJET *</label><input style={styles.input} value={projetForm.titre} onChange={(e) => setProjetForm((p) => ({ ...p, titre: e.target.value }))} /></div>
-                  <div><label style={styles.label}>OBJECTIF (FCFA) *</label><input type="number" min="0" style={styles.input} value={projetForm.objectif} onChange={(e) => setProjetForm((p) => ({ ...p, objectif: e.target.value }))} /></div>
-                  <div><label style={styles.label}>IMAGE (URL)</label><input style={styles.input} value={projetForm.image} onChange={(e) => setProjetForm((p) => ({ ...p, image: e.target.value }))} /></div>
-                </div>
-                <label style={styles.label}>DESCRIPTION</label>
-                <textarea style={{ ...styles.input, minHeight: "120px", resize: "vertical" }} value={projetForm.description} onChange={(e) => setProjetForm((p) => ({ ...p, description: e.target.value }))} />
-                <label style={{ ...styles.label, display: "flex", alignItems: "center", gap: "8px" }}>
-                  <input type="checkbox" checked={projetForm.actif} onChange={(e) => setProjetForm((p) => ({ ...p, actif: e.target.checked }))} />
-                  Projet visible sur le site
-                </label>
-                <button type="submit" style={styles.button}>{projetForm.id ? "MODIFIER LE PROJET" : "CRÉER LE PROJET"}</button>
-              </form>
-
-              <div style={{ marginTop: "25px" }}>
-                {projets.map((p) => {
-                  const objectif = Number(p.objectif) || 0;
-                  const collecte = Number(p.collecte) || 0;
-                  const pct = objectif ? Math.min(100, Math.round((collecte / objectif) * 100)) : 0;
-                  return (
-                    <div key={p.id} className="interactive-card" style={{ ...styles.card, marginBottom: "12px" }}>
-                      {p.image && <img src={p.image} alt="" style={{ width: "100%", maxHeight: "200px", objectFit: "cover", borderRadius: "14px" }} />}
-                      <h4 style={styles.cardTitle}>{p.titre}</h4>
-                      <p style={styles.cardText}>{p.description}</p>
-                      <strong>{collecte.toLocaleString("fr-FR")} / {objectif.toLocaleString("fr-FR")} FCFA ({pct}%)</strong>
-                      <div style={{ marginTop: "12px", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                        <button type="button" style={styles.secondaryButton} onClick={() => setProjetForm({ ...p, objectif: p.objectif, image: p.image || "" })}>MODIFIER</button>
-                        <button type="button" style={styles.button} onClick={() => soutenirProjet(p.id, 1000)}>+ 1 000 FCFA (TEST)</button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {adminTab === "leader" && (
-            <div>
-              <h3 style={styles.cardTitle}>JEUNE LEADER DU MOIS</h3>
-              <form onSubmit={enregistrerLeader}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "10px 18px" }}>
-                  <div><label style={styles.label}>NOM COMPLET</label><input style={styles.input} value={leaderForm.nom} onChange={(e) => setLeaderForm((l) => ({ ...l, nom: e.target.value }))} /></div>
-                  <div><label style={styles.label}>MOIS</label><input type="month" style={styles.input} value={leaderForm.mois} onChange={(e) => setLeaderForm((l) => ({ ...l, mois: e.target.value }))} /></div>
-                  <div><label style={styles.label}>PHOTO (URL)</label><input style={styles.input} value={leaderForm.photo || ""} onChange={(e) => setLeaderForm((l) => ({ ...l, photo: e.target.value }))} /></div>
-                </div>
-                <label style={styles.label}>PRÉSENTATION COMPLÈTE</label>
-                <textarea style={{ ...styles.input, minHeight: "180px", resize: "vertical" }} value={leaderForm.presentation} onChange={(e) => setLeaderForm((l) => ({ ...l, presentation: e.target.value }))} />
-                <button type="submit" style={styles.button}>ENREGISTRER LE LEADER</button>
-              </form>
-            </div>
-          )}
-
-          {adminTab === "calendrier" && (
-            <div>
-              <h3 style={styles.cardTitle}>CALENDRIER DES PROGRAMMES</h3>
-              <p style={styles.sectionText}>
-                Les dates saisies dans les articles et annonces apparaissent
-                automatiquement ici, triées par date.
-              </p>
-
-              <div style={styles.cards}>
-                {articles
-                  .filter((a) => a.dateEvenement)
-                  .sort((a, b) =>
-                    a.dateEvenement.localeCompare(b.dateEvenement)
-                  )
-                  .map((a) => (
-                    <div style={styles.card} key={`cal-${a.id}`}>
-                      <div
-                        style={{
-                          color: "#2456d8",
-                          fontWeight: 900,
-                          fontSize: "18px",
-                        }}
-                      >
-                        {a.dateEvenement}
-                      </div>
-                      <h4
-                        style={{
-                          ...styles.cardTitle,
-                          marginTop: "8px",
-                        }}
-                      >
-                        {a.titre}
-                      </h4>
-                      <p style={styles.cardText}>{a.categorie}</p>
-                    </div>
-                  ))}
-              </div>
-
-              {articles.filter((a) => a.dateEvenement).length === 0 && (
-                <p style={styles.sectionText}>
-                  Aucun programme planifié pour le moment. Créez un article
-                  avec une date de programme.
-                </p>
-              )}
-            </div>
-          )}
-
-          {adminTab === "direct" && (
-            <div>
-              <h3 style={styles.cardTitle}>
-                DIRECTS, PRÉDICATIONS & MÉDIAS
-              </h3>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns:
-                    "repeat(auto-fit, minmax(220px, 1fr))",
-                  gap: "10px 18px",
-                }}
-              >
-                <div>
-                  <label style={styles.label}>TITRE DU DIRECT</label>
-                  <input
-                    style={styles.input}
-                    value={direct.titre}
-                    onChange={(e) =>
-                      setDirect((d) => ({
-                        ...d,
-                        titre: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label style={styles.label}>SOUS-TITRE</label>
-                  <input
-                    style={styles.input}
-                    value={direct.sousTitre}
-                    onChange={(e) =>
-                      setDirect((d) => ({
-                        ...d,
-                        sousTitre: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label style={styles.label}>
-                    LIEN VIDÉO / DIRECT
-                  </label>
-                  <input
-                    style={styles.input}
-                    value={direct.url}
-                    onChange={(e) =>
-                      setDirect((d) => ({
-                        ...d,
-                        url: e.target.value,
-                      }))
-                    }
-                    placeholder="https://youtube.com/..."
-                  />
-                </div>
-              </div>
-
-              <label
-                style={{
-                  ...styles.label,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginTop: "8px",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={direct.actif}
-                  onChange={(e) =>
-                    setDirect((d) => ({
-                      ...d,
-                      actif: e.target.checked,
-                    }))
-                  }
-                />
-                Afficher le direct comme ACTIF sur le site
-              </label>
-
-              <p
-                style={{
-                  ...styles.sectionText,
-                  marginTop: "20px",
-                }}
-              >
-                Les prédications et médias existants sont visibles dans
-                « DIRECT & PRÉDICATIONS ». Les nouveaux contenus peuvent
-                être ajoutés depuis « ANNONCES & ARTICLES » avec image,
-                description et date.
-              </p>
-
-              <div style={styles.cards}>
-                {medias.map((m) => (
-                  <div style={styles.card} key={m.id}>
-                    <div
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 900,
-                        color: "#5420a8",
-                      }}
-                    >
-                      {m.type}
-                    </div>
-                    <h4
-                      style={{
-                        ...styles.cardTitle,
-                        marginTop: "7px",
-                      }}
-                    >
-                      {m.titre}
-                    </h4>
-                    <p style={styles.cardText}>{m.description}</p>
-                    <button
-                      style={styles.secondaryButton}
-                      onClick={() =>
-                        window.open(
-                          m.url,
-                          "_blank",
-                          "noopener,noreferrer"
-                        )
-                      }
-                    >
-                      OUVRIR LE MÉDIA
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {adminTab === "dashboard" && (
-            <div style={styles.cards}>
-              <div style={styles.card}><h3 style={styles.cardTitle}>ÉGLISES EN ATTENTE</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{eglises.filter((e) => e.statut === "EN ATTENTE").length}</strong></div>
-              <div style={styles.card}><h3 style={styles.cardTitle}>PRODUITS</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{produits.length}</strong></div>
-              <div style={styles.card}><h3 style={styles.cardTitle}>ARTICLES</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{articles.length}</strong></div>
-              <div style={styles.card}><h3 style={styles.cardTitle}>PROJETS</h3><strong style={{ fontSize: "36px", color: "#2456d8" }}>{projets.length}</strong></div>
-              <div style={styles.card}><h3 style={styles.cardTitle}>LEADER DU MOIS</h3><strong style={{ fontSize: "20px", color: "#5420a8" }}>{leaderMois.nom}</strong></div>
-            </div>
-          )}
-        </div>
-      </section>
-    </>
-  );
-
-  const renderUtilisateurs = () => (
-    <section style={styles.section}>
-      <div style={styles.sectionHeader}>
-        <h2 style={styles.sectionTitle}>UTILISATEURS</h2>
-        <p style={styles.sectionText}>
-          Choisissez le type d'espace à créer.
-        </p>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginBottom: "25px",
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          style={
-            typeInscription === "JEUNE"
-              ? styles.button
-              : styles.secondaryButton
-          }
-          onClick={() => {
-            setTypeInscription("JEUNE");
-            setInscriptionMessage("");
-          }}
-        >
-          ESPACE JEUNE
-        </button>
-
-        <button
-          style={
-            typeInscription === "RESPONSABLE RÉGIONAL"
-              ? styles.button
-              : styles.secondaryButton
-          }
-          onClick={() => {
-            setTypeInscription("RESPONSABLE RÉGIONAL");
-            setInscriptionMessage("");
-          }}
-        >
-          RESPONSABLE RÉGIONAL
-        </button>
-      </div>
-
-      <div style={styles.adminBox}>
-        <h3 style={styles.cardTitle}>
-          INSCRIPTION — {typeInscription}
-        </h3>
-
-        <form onSubmit={soumettreInscription}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(230px, 1fr))",
-              gap: "10px 18px",
-            }}
-          >
-            <div>
-              <label style={styles.label}>NOM ET PRÉNOMS *</label>
-              <input
-                style={styles.input}
-                value={inscription.nom}
-                onChange={(event) =>
-                  modifierInscription("nom", event.target.value)
-                }
-                placeholder="Nom et prénoms"
-                required
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>TÉLÉPHONE *</label>
-              <input
-                style={styles.input}
-                value={inscription.telephone}
-                onChange={(event) =>
-                  modifierInscription("telephone", event.target.value)
-                }
-                placeholder="07 00 00 00 00"
-                required
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>E-MAIL *</label>
-              <input
-                type="email"
-                style={styles.input}
-                value={inscription.email}
-                onChange={(event) =>
-                  modifierInscription("email", event.target.value)
-                }
-                placeholder="adresse@email.com"
-                required
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>MOT DE PASSE *</label>
-              <input
-                type="password"
-                style={styles.input}
-                value={inscription.motDePasse}
-                onChange={(event) =>
-                  modifierInscription("motDePasse", event.target.value)
-                }
-                placeholder="Mot de passe"
-                required
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>VILLE *</label>
-              <input
-                style={styles.input}
-                value={inscription.ville}
-                onChange={(event) =>
-                  modifierInscription("ville", event.target.value)
-                }
-                placeholder="Ville"
-                required
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>COMMUNE</label>
-              <input
-                style={styles.input}
-                value={inscription.commune}
-                onChange={(event) =>
-                  modifierInscription("commune", event.target.value)
-                }
-                placeholder="Commune"
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>QUARTIER</label>
-              <input
-                style={styles.input}
-                value={inscription.quartier}
-                onChange={(event) =>
-                  modifierInscription("quartier", event.target.value)
-                }
-                placeholder="Quartier"
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>SEXE</label>
-              <select
-                style={styles.input}
-                value={inscription.sexe}
-                onChange={(event) =>
-                  modifierInscription("sexe", event.target.value)
-                }
-              >
-                <option value="">Sélectionner</option>
-                <option value="HOMME">HOMME</option>
-                <option value="FEMME">FEMME</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={styles.label}>STATUT SOCIAL</label>
-              <input
-                style={styles.input}
-                value={inscription.statutSocial}
-                onChange={(event) =>
-                  modifierInscription("statutSocial", event.target.value)
-                }
-                placeholder="Étudiant, salarié..."
-              />
-            </div>
-
-            <div>
-              <label style={styles.label}>STATUT MATRIMONIAL</label>
-              <select
-                style={styles.input}
-                value={inscription.statutMatrimonial}
-                onChange={(event) =>
-                  modifierInscription(
-                    "statutMatrimonial",
-                    event.target.value
-                  )
-                }
-              >
-                <option value="">Sélectionner</option>
-                <option value="CÉLIBATAIRE">CÉLIBATAIRE</option>
-                <option value="MARIÉ(E)">MARIÉ(E)</option>
-              </select>
-            </div>
-
-            {typeInscription === "JEUNE" ? (
-              <>
-                <div>
-                  <label style={styles.label}>ÉGLISE LOCALE</label>
-                  <input
-                    style={styles.input}
-                    value={inscription.eglise}
-                    onChange={(event) =>
-                      modifierInscription("eglise", event.target.value)
-                    }
-                    placeholder="AD Temple de la Gloire"
-                  />
-                </div>
-
-                <div>
-                  <label style={styles.label}>COMITÉ / DÉPARTEMENT</label>
-                  <input
-                    style={styles.input}
-                    value={inscription.departement}
-                    onChange={(event) =>
-                      modifierInscription(
-                        "departement",
-                        event.target.value
-                      )
-                    }
-                    placeholder="Musique, prière..."
-                  />
-                </div>
-
-                <div>
-                  <label style={styles.label}>CV</label>
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    style={styles.input}
-                    onChange={(event) =>
-                      modifierInscription(
-                        "cv",
-                        event.target.files?.[0] || null
-                      )
-                    }
-                  />
-                </div>
-
-                <div>
-                  <label style={styles.label}>PHOTO DE PROFIL</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    style={styles.input}
-                    onChange={(event) =>
-                      modifierInscription(
-                        "photo",
-                        event.target.files?.[0] || null
-                      )
-                    }
-                  />
-                </div>
-              </>
-            ) : (
-              <div>
-                <label style={styles.label}>RESPONSABILITÉ</label>
-                <input
-                  style={styles.input}
-                  value={inscription.responsabilite}
-                  onChange={(event) =>
-                    modifierInscription(
-                      "responsabilite",
-                      event.target.value
-                    )
-                  }
-                  placeholder="Responsabilité régionale"
-                />
-              </div>
-            )}
-          </div>
-
-          {inscriptionMessage && (
-            <div
-              style={{
-                margin: "10px 0 20px",
-                padding: "14px",
-                borderRadius: "10px",
-                background: "#f1f5f9",
-                color: "#334155",
-                fontWeight: 700,
-              }}
-            >
-              {inscriptionMessage}
-            </div>
-          )}
-
-          <button type="submit" style={styles.button}>
-            SOUMETTRE L'INSCRIPTION
-          </button>
-        </form>
-      </div>
-    </section>
-  );
-
-  const renderEspaces = () => (
-    <section style={styles.section}>
-      <div style={styles.sectionHeader}>
-        <h2 style={styles.sectionTitle}>ESPACES JADCI</h2>
-        <p style={styles.sectionText}>
-          Chaque espace dispose d'un accès protégé selon le profil : jeune, responsable régional ou gérant.
-        </p>
-      </div>
-
-      <div style={styles.cards}>
-        <div style={styles.espaceCard("#ca8a04")}>
-          <div style={styles.espaceIcone("#ca8a04")}>🟨</div>
-          <span style={styles.espaceBadge("#ca8a04")}>ESPACE JEUNE</span>
-          <h3 style={styles.cardTitle}>{jeuneConnecte ? `Bonjour ${jeuneConnecte.nom.split(" ")[0]}` : "Espace Jeunes"}</h3>
-          <p style={styles.cardText}>Accès protégé aux achats, commandes et requêtes.</p>
-          {jeuneConnecte ? (
-            <button type="button" style={styles.button} onClick={() => aller("espace-jeune")}>OUVRIR MON ESPACE</button>
-          ) : (
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              <button type="button" style={styles.button} onClick={() => { setModeEspaceJeune("connexion"); aller("espace-jeune"); }}>SE CONNECTER</button>
-              <button type="button" style={styles.secondaryButton} onClick={() => { setModeEspaceJeune("creation"); aller("espace-jeune"); }}>CRÉER UN COMPTE</button>
-            </div>
-          )}
-        </div>
-
-        <div style={styles.espaceCard("#16a34a")}>
-          <div style={styles.espaceIcone("#16a34a")}>🟩</div>
-          <span style={styles.espaceBadge("#16a34a")}>ESPACE RESPONSABLE</span>
-          <h3 style={styles.cardTitle}>{responsableConnecte ? `Bonjour ${responsableConnecte.nom.split(" ")[0]}` : "Espace Responsable"}</h3>
-          <p style={styles.cardText}>Accès protégé aux soumissions et commandes.</p>
-          {responsableConnecte ? (
-            <button type="button" style={styles.button} onClick={() => aller("espace-responsable")}>OUVRIR MON ESPACE</button>
-          ) : (
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              <button type="button" style={styles.button} onClick={() => { setModeEspaceResponsable("connexion"); aller("espace-responsable"); }}>SE CONNECTER</button>
-              <button type="button" style={styles.secondaryButton} onClick={() => { setModeEspaceResponsable("creation"); aller("espace-responsable"); }}>CRÉER UN COMPTE</button>
-            </div>
-          )}
-        </div>
-
-        <div style={styles.espaceCard("#334155")}>
-          <div style={styles.espaceIcone("#334155")}>👤</div>
-          <span style={styles.espaceBadge("#334155")}>ESPACE GÉRANT</span>
-          <h3 style={styles.cardTitle}>Espace Gérant</h3>
-          <p style={styles.cardText}>Suppression rapide d'une annonce ou d'un produit.</p>
-          <button type="button" style={styles.button} onClick={() => aller("espace-gerant")}>ACCÉDER À L'ESPACE</button>
-        </div>
-      </div>
-    </section>
-  );
-
-  const renderEspaceJeune = () => {
-    if (!jeuneConnecte) {
-      return (
-        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
-          <div style={styles.adminBox}>
-            <span style={styles.espaceBadge("#ca8a04")}>🟨 ESPACE JEUNE</span>
-            <h2 style={{ ...styles.sectionTitle, marginTop: "12px" }}>
-              {modeEspaceJeune === "connexion" ? "Se connecter" : "Créer un compte"}
-            </h2>
-            <p style={styles.sectionText}>Accès protégé aux achats, commandes et requêtes.</p>
-
-            <div style={{ display: "flex", gap: "8px", margin: "18px 0" }}>
-              <button type="button" style={modeEspaceJeune === "connexion" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceJeune("connexion"); setMessageEspaceJeune(""); }}>SE CONNECTER</button>
-              <button type="button" style={modeEspaceJeune === "creation" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceJeune("creation"); setMessageEspaceJeune(""); }}>CRÉER UN COMPTE</button>
-            </div>
-
-            {modeEspaceJeune === "connexion" ? (
-              <form onSubmit={connecterJeune}>
-                <label style={styles.label}>E-MAIL *</label>
-                <input type="email" required style={styles.input} value={connexionJeune.email} onChange={(e) => setConnexionJeune((c) => ({ ...c, email: e.target.value }))} />
-                <label style={styles.label}>MOT DE PASSE *</label>
-                <input type="password" required style={styles.input} value={connexionJeune.motDePasse} onChange={(e) => setConnexionJeune((c) => ({ ...c, motDePasse: e.target.value }))} />
-                {messageEspaceJeune && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceJeune}</p>}
-                <button type="submit" style={{ ...styles.button, width: "100%" }}>SE CONNECTER</button>
-              </form>
-            ) : (
-              <form onSubmit={creerCompteJeune}>
-                <label style={styles.label}>NOM ET PRÉNOMS *</label>
-                <input required style={styles.input} value={compteJeune.nom} onChange={(e) => setCompteJeune((c) => ({ ...c, nom: e.target.value }))} />
-                <label style={styles.label}>TÉLÉPHONE *</label>
-                <input required style={styles.input} value={compteJeune.telephone} onChange={(e) => setCompteJeune((c) => ({ ...c, telephone: e.target.value }))} />
-                <label style={styles.label}>E-MAIL *</label>
-                <input type="email" required style={styles.input} value={compteJeune.email} onChange={(e) => setCompteJeune((c) => ({ ...c, email: e.target.value }))} />
-                <label style={styles.label}>VILLE *</label>
-                <input required style={styles.input} value={compteJeune.ville} onChange={(e) => setCompteJeune((c) => ({ ...c, ville: e.target.value }))} />
-                <label style={styles.label}>MOT DE PASSE *</label>
-                <input type="password" required style={styles.input} value={compteJeune.motDePasse} onChange={(e) => setCompteJeune((c) => ({ ...c, motDePasse: e.target.value }))} />
-                <label style={styles.label}>CONFIRMATION DU MOT DE PASSE *</label>
-                <input type="password" required style={styles.input} value={compteJeune.confirmation} onChange={(e) => setCompteJeune((c) => ({ ...c, confirmation: e.target.value }))} />
-                {messageEspaceJeune && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceJeune}</p>}
-                <button type="submit" style={{ ...styles.button, width: "100%" }}>CRÉER MON COMPTE</button>
-              </form>
-            )}
-          </div>
-        </section>
-      );
-    }
-
-    return (
-      <section style={styles.section}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
-          <div>
-            <span style={styles.espaceBadge("#ca8a04")}>🟨 ESPACE JEUNE</span>
-            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>{jeuneConnecte.nom}</h2>
-            <p style={styles.sectionText}>Matricule : {jeuneConnecte.matricule} • {jeuneConnecte.ville}</p>
-          </div>
-          <button type="button" style={styles.secondaryButton} onClick={deconnecterJeune}>DÉCONNEXION</button>
-        </div>
-
-        <div style={styles.cards}>
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>MES COMMANDES</h3>
-            {(jeuneConnecte.commandes || []).length === 0 ? (
-              <p style={styles.sectionText}>Aucune commande pour le moment. Rendez-vous dans la boutique.</p>
-            ) : (
-              (jeuneConnecte.commandes || []).map((cmd) => (
-                <div key={cmd.id} style={{ padding: "12px 0", borderBottom: "1px solid #e5e7eb" }}>
-                  <strong>{cmd.date} — {cmd.total.toLocaleString("fr-FR")} FCFA</strong>
-                  <div style={{ color: "#64748b", fontSize: "14px" }}>{cmd.articles.map((a) => `${a.nom} x${a.quantite}`).join(", ")}</div>
-                  <span style={{ color: "#2456d8", fontWeight: 800, fontSize: "13px" }}>{cmd.statut}</span>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>MES REQUÊTES</h3>
-            <form onSubmit={soumettreRequeteJeune}>
-              <textarea name="requete" required placeholder="Décrivez votre requête..." style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
-              <button type="submit" style={styles.button}>ENVOYER LA REQUÊTE</button>
-            </form>
-            <div style={{ marginTop: "16px" }}>
-              {(jeuneConnecte.requetes || []).length === 0 ? (
-                <p style={styles.sectionText}>Aucune requête envoyée.</p>
-              ) : (
-                (jeuneConnecte.requetes || []).map((r) => (
-                  <div key={r.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-                    <p style={{ margin: 0 }}>{r.texte}</p>
-                    <span style={{ color: "#64748b", fontSize: "12px" }}>{r.date} • {r.statut}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-    );
+    exporterExcel(tJeunes, "Jeunes", "JADCI_Export_Jeunes");
+    exporterExcel(tResponsables, "Responsables", "JADCI_Export_Responsables");
+    exporterExcel(tCommandes, "Commandes", "JADCI_Export_Commandes");
+    exporterExcel(tRequetes, "Requetes", "JADCI_Export_Requetes");
+    exporterExcel(tProjets, "Projets", "JADCI_Export_Projets");
+    exporterExcel(tEglises, "Eglises", "JADCI_Export_Eglises");
   };
 
-  const renderEspaceResponsable = () => {
-    if (!responsableConnecte) {
-      return (
-        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
-          <div style={styles.adminBox}>
-            <span style={styles.espaceBadge("#16a34a")}>🟩 ESPACE RESPONSABLE</span>
-            <h2 style={{ ...styles.sectionTitle, marginTop: "12px" }}>
-              {modeEspaceResponsable === "connexion" ? "Se connecter" : "Créer un compte"}
-            </h2>
-            <p style={styles.sectionText}>Accès protégé aux soumissions et commandes.</p>
+  const calculerChiffresAffaires = () => {
+    let totalPayements = 0;
+    let nombreCommandes = 0;
 
-            <div style={{ display: "flex", gap: "8px", margin: "18px 0" }}>
-              <button type="button" style={modeEspaceResponsable === "connexion" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceResponsable("connexion"); setMessageEspaceResponsable(""); }}>SE CONNECTER</button>
-              <button type="button" style={modeEspaceResponsable === "creation" ? styles.button : styles.secondaryButton} onClick={() => { setModeEspaceResponsable("creation"); setMessageEspaceResponsable(""); }}>CRÉER UN COMPTE</button>
-            </div>
+    [...comptesJeunes, ...comptesResponsables].forEach((c) => {
+      (c.commandes || []).forEach((cmd) => {
+        if (cmd.statut === "PAYÉE") {
+          totalPayements += cmd.total;
+          nombreCommandes++;
+        }
+      });
+    });
 
-            {modeEspaceResponsable === "connexion" ? (
-              <form onSubmit={connecterResponsable}>
-                <label style={styles.label}>E-MAIL *</label>
-                <input type="email" required style={styles.input} value={connexionResponsable.email} onChange={(e) => setConnexionResponsable((c) => ({ ...c, email: e.target.value }))} />
-                <label style={styles.label}>MOT DE PASSE *</label>
-                <input type="password" required style={styles.input} value={connexionResponsable.motDePasse} onChange={(e) => setConnexionResponsable((c) => ({ ...c, motDePasse: e.target.value }))} />
-                {messageEspaceResponsable && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceResponsable}</p>}
-                <button type="submit" style={{ ...styles.button, width: "100%" }}>SE CONNECTER</button>
-              </form>
-            ) : (
-              <form onSubmit={creerCompteResponsable}>
-                <label style={styles.label}>NOM ET PRÉNOMS *</label>
-                <input required style={styles.input} value={compteResponsable.nom} onChange={(e) => setCompteResponsable((c) => ({ ...c, nom: e.target.value }))} />
-                <label style={styles.label}>TÉLÉPHONE *</label>
-                <input required style={styles.input} value={compteResponsable.telephone} onChange={(e) => setCompteResponsable((c) => ({ ...c, telephone: e.target.value }))} />
-                <label style={styles.label}>E-MAIL *</label>
-                <input type="email" required style={styles.input} value={compteResponsable.email} onChange={(e) => setCompteResponsable((c) => ({ ...c, email: e.target.value }))} />
-                <label style={styles.label}>VILLE *</label>
-                <input required style={styles.input} value={compteResponsable.ville} onChange={(e) => setCompteResponsable((c) => ({ ...c, ville: e.target.value }))} />
-                <label style={styles.label}>RESPONSABILITÉ</label>
-                <input style={styles.input} value={compteResponsable.responsabilite} onChange={(e) => setCompteResponsable((c) => ({ ...c, responsabilite: e.target.value }))} />
-                <label style={styles.label}>MOT DE PASSE *</label>
-                <input type="password" required style={styles.input} value={compteResponsable.motDePasse} onChange={(e) => setCompteResponsable((c) => ({ ...c, motDePasse: e.target.value }))} />
-                <label style={styles.label}>CONFIRMATION DU MOT DE PASSE *</label>
-                <input type="password" required style={styles.input} value={compteResponsable.confirmation} onChange={(e) => setCompteResponsable((c) => ({ ...c, confirmation: e.target.value }))} />
-                {messageEspaceResponsable && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{messageEspaceResponsable}</p>}
-                <button type="submit" style={{ ...styles.button, width: "100%" }}>CRÉER MON COMPTE</button>
-              </form>
-            )}
-          </div>
-        </section>
-      );
-    }
-
-    return (
-      <section style={styles.section}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
-          <div>
-            <span style={styles.espaceBadge("#16a34a")}>🟩 ESPACE RESPONSABLE</span>
-            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>{responsableConnecte.nom}</h2>
-            <p style={styles.sectionText}>{responsableConnecte.responsabilite || "Responsable régional"} • {responsableConnecte.ville}</p>
-          </div>
-          <button type="button" style={styles.secondaryButton} onClick={deconnecterResponsable}>DÉCONNEXION</button>
-        </div>
-
-        <div style={styles.cards}>
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>NOUVELLE SOUMISSION</h3>
-            <form onSubmit={soumettreProjetResponsable}>
-              <label style={styles.label}>TITRE *</label>
-              <input name="titre" required style={styles.input} />
-              <label style={styles.label}>DESCRIPTION</label>
-              <textarea name="description" style={{ ...styles.input, minHeight: "90px", resize: "vertical" }} />
-              <button type="submit" style={styles.button}>SOUMETTRE</button>
-            </form>
-          </div>
-
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>MES SOUMISSIONS</h3>
-            {(responsableConnecte.soumissions || []).length === 0 ? (
-              <p style={styles.sectionText}>Aucune soumission envoyée.</p>
-            ) : (
-              (responsableConnecte.soumissions || []).map((s) => (
-                <div key={s.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-                  <strong>{s.titre}</strong>
-                  <p style={{ margin: "4px 0", color: "#64748b" }}>{s.description}</p>
-                  <span style={{ color: "#64748b", fontSize: "12px" }}>{s.date} • {s.statut}</span>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>MES COMMANDES</h3>
-            {(responsableConnecte.commandes || []).length === 0 ? (
-              <p style={styles.sectionText}>Aucune commande enregistrée.</p>
-            ) : (
-              (responsableConnecte.commandes || []).map((cmd) => (
-                <div key={cmd.id} style={{ padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-                  <strong>{cmd.date} — {Number(cmd.total || 0).toLocaleString("fr-FR")} FCFA</strong>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-    );
+    return { totalPayements, nombreCommandes };
   };
 
-  const renderEspaceGerant = () => {
-    if (!gerantConnecte) {
-      return (
-        <section style={{ ...styles.section, maxWidth: "560px", margin: "10px auto 70px" }}>
-          <div style={styles.adminBox}>
-            <span style={styles.espaceBadge("#334155")}>👤 ESPACE GÉRANT</span>
-            <h2 style={{ ...styles.sectionTitle, marginTop: "12px" }}>Accès gérant</h2>
-            <p style={styles.sectionText}>Cet espace permet de supprimer rapidement une annonce ou un produit.</p>
+  const { totalPayements, nombreCommandes } = calculerChiffresAffaires();
 
-            <label style={styles.label}>MOT DE PASSE GÉRANT</label>
-            <input
-              type="password"
-              style={styles.input}
-              value={motDePasseGerant}
-              onChange={(e) => { setMotDePasseGerant(e.target.value); if (erreurGerant) setErreurGerant(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") connecterGerant(); }}
-              placeholder="Entrez le mot de passe"
-            />
-            {erreurGerant && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{erreurGerant}</p>}
-            <button type="button" style={{ ...styles.button, width: "100%" }} onClick={connecterGerant}>SE CONNECTER</button>
-          </div>
-        </section>
-      );
-    }
-
-    return (
-      <section style={styles.section}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "24px" }}>
-          <div>
-            <span style={styles.espaceBadge("#334155")}>👤 ESPACE GÉRANT</span>
-            <h2 style={{ ...styles.sectionTitle, marginTop: "10px" }}>Gestion rapide</h2>
-          </div>
-          <button type="button" style={styles.secondaryButton} onClick={deconnecterGerant}>DÉCONNEXION</button>
-        </div>
-
-        {messageGerant && <div className="admin-success" style={{ marginBottom: "20px" }}>{messageGerant}</div>}
-
-        <div style={styles.cards}>
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>SUPPRIMER UNE ANNONCE</h3>
-            {annonces.length === 0 ? (
-              <p style={styles.sectionText}>Aucune annonce à afficher.</p>
-            ) : (
-              annonces.map((texte, index) => (
-                <div key={`${texte}-${index}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-                  <span>{texte}</span>
-                  <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerAnnonceGerant(index)}>SUPPRIMER</button>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div style={styles.adminBox}>
-            <h3 style={styles.cardTitle}>SUPPRIMER UN PRODUIT</h3>
-            {produits.length === 0 ? (
-              <p style={styles.sectionText}>Aucun produit à afficher.</p>
-            ) : (
-              produits.map((p) => (
-                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-                  <span>{p.nom} — {Number(p.prix).toLocaleString("fr-FR")} FCFA</span>
-                  <button type="button" style={{ ...styles.secondaryButton, color: "#b91c1c" }} onClick={() => supprimerProduitGerant(p.id)}>SUPPRIMER</button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
-    );
-  };
-
-  const renderEglises = () => (
-    <>
-      <section style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>LISTE DES ÉGLISES</h2>
-          <p style={styles.sectionText}>
-            Retrouvez les assemblées enregistrées sur la plateforme JADCI.
-          </p>
-        </div>
-
-        <input
-          style={{ ...styles.input, maxWidth: "650px" }}
-          value={rechercheEglise}
-          onChange={(event) => setRechercheEglise(event.target.value)}
-          placeholder="Rechercher une église, une ville, une commune ou un quartier..."
-        />
-
-        {eglisesFiltrees.length === 0 ? (
-          <div style={styles.card}>
-            <p style={styles.cardText}>Aucune église ne correspond à votre recherche.</p>
-          </div>
-        ) : (
-          <div style={styles.cards}>
-            {eglisesFiltrees.map((eglise) => (
-              <div style={styles.card} key={eglise.id}>
-                <h3 style={styles.cardTitle}>{eglise.nom}</h3>
-
-                <p style={styles.cardText}>
-                  <strong>Pasteur :</strong> {eglise.pasteur}
-                  <br />
-                  <strong>Ville :</strong> {eglise.ville}
-                  <br />
-                  <strong>Commune :</strong> {eglise.commune || "—"}
-                  <br />
-                  <strong>Quartier :</strong> {eglise.quartier || "—"}
-                </p>
-
-                <button
-                  type="button"
-                  style={styles.secondaryButton}
-                  onClick={() => {
-                    const url =
-                      eglise.localisation ||
-                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        `${eglise.nom} ${eglise.ville} ${eglise.commune || ""}`
-                      )}`;
-                    window.open(url, "_blank", "noopener,noreferrer");
-                  }}
-                >
-                  VOIR SUR GOOGLE MAPS
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section style={styles.section}>
-        <div style={styles.adminBox}>
-          <h3 style={styles.cardTitle}>SOUMETTRE UNE ÉGLISE</h3>
-
-          <form onSubmit={ajouterEglise}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(230px, 1fr))",
-                gap: "10px 18px",
-              }}
-            >
-              {[
-                ["nom", "NOM DE L'ÉGLISE"],
-                ["pasteur", "NOM DU PASTEUR"],
-                ["ville", "VILLE"],
-                ["commune", "COMMUNE"],
-                ["quartier", "QUARTIER"],
-                ["localisation", "LIEN GOOGLE MAPS"],
-              ].map(([champ, label]) => (
-                <div key={champ}>
-                  <label style={styles.label}>{label}</label>
-                  <input
-                    style={styles.input}
-                    value={nouvelleEglise[champ]}
-                    onChange={(event) =>
-                      setNouvelleEglise((ancienne) => ({
-                        ...ancienne,
-                        [champ]: event.target.value,
-                      }))
-                    }
-                    placeholder={label}
-                    required={["nom", "pasteur", "ville"].includes(champ)}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <button type="submit" style={styles.button}>
-              SOUMETTRE L'ÉGLISE
-            </button>
-          </form>
-        </div>
-      </section>
-    </>
-  );
-
-  const renderBoutique = () => (
-    <>
-      <section style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <h2 style={styles.sectionTitle}>BOUTIQUE JADCI</h2>
-          <p style={styles.sectionText}>
-            Commandez les produits disponibles et préparez votre livraison.
-          </p>
-        </div>
-
-        <div style={styles.cards}>
-          {produits.map((produit) => (
-            <div style={styles.card} key={produit.id}>
-              <div
-                style={{
-                  height: "130px",
-                  borderRadius: "15px",
-                  background:
-                    "linear-gradient(135deg, #f1eaff, #e7edff)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#5420a8",
-                  fontWeight: 900,
-                  marginBottom: "18px",
-                }}
-              >
-                {produit.categorie}
-              </div>
-
-              <h3 style={styles.cardTitle}>{produit.nom}</h3>
-              <p style={styles.cardText}>{produit.description}</p>
-
-              <div style={{ color: "#f59e0b", fontWeight: 900, marginBottom: "8px" }}>{"★".repeat(Math.round(produit.appreciation || 0))} <span style={{ color: "#64748b", fontWeight: 700 }}>({produit.stock ?? 0} en stock)</span></div>
-              <strong
-                style={{
-                  display: "block",
-                  color: "#2456d8",
-                  fontSize: "20px",
-                  marginBottom: "15px",
-                }}
-              >
-                {produit.prix.toLocaleString("fr-FR")} FCFA
-              </strong>
-
-              <button
-                type="button"
-                disabled={(produit.stock ?? 0) === 0}
-                style={{ ...styles.button, opacity: (produit.stock ?? 0) === 0 ? 0.5 : 1, cursor: (produit.stock ?? 0) === 0 ? "not-allowed" : "pointer" }}
-                onClick={() => ajouterAuPanier(produit)}
-              >
-                {(produit.stock ?? 0) === 0 ? "RUPTURE DE STOCK" : "AJOUTER À LA COMMANDE"}
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div style={styles.adminBox}>
-          <h3 style={styles.cardTitle}>MA COMMANDE</h3>
-
-          {panier.length === 0 ? (
-            <p style={styles.sectionText}>
-              Aucun produit dans la commande.
-            </p>
-          ) : (
-            <>
-              {panier.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: "15px",
-                    padding: "14px 0",
-                    borderBottom: "1px solid #e5e7eb",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div>
-                    <strong>{item.nom}</strong>
-                    <div style={{ color: "#64748b", marginTop: "4px" }}>
-                      {item.prix.toLocaleString("fr-FR")} FCFA
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      style={styles.secondaryButton}
-                      onClick={() => modifierQuantite(item.id, -1)}
-                    >
-                      -
-                    </button>
-
-                    <strong>{item.quantite}</strong>
-
-                    <button
-                      type="button"
-                      style={styles.secondaryButton}
-                      onClick={() => modifierQuantite(item.id, 1)}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  gap: "15px",
-                  marginTop: "20px",
-                  fontSize: "20px",
-                  fontWeight: 900,
-                }}
-              >
-                <span>TOTAL</span>
-                <span>{totalPanier.toLocaleString("fr-FR")} FCFA</span>
-              </div>
-
-              <button
-                type="button"
-                style={{ ...styles.button, marginTop: "20px" }}
-                onClick={confirmerCommande}
-              >
-                CONFIRMER LA COMMANDE
-              </button>
-            </>
-          )}
-
-          {commandeMessage && (
-            <p
-              style={{
-                marginTop: "18px",
-                color: "#334155",
-                fontWeight: 700,
-              }}
-            >
-              {commandeMessage}
-            </p>
-          )}
-        </div>
-      </section>
-    </>
-  );
-
-  const renderMedias = () => {
-    const mediasFiltres =
-      mediaFiltre === "TOUT"
-        ? medias
-        : medias.filter((media) => media.type === mediaFiltre);
-
-    return (
-      <>
-        <section style={styles.section}>
-          <div style={styles.sectionHeader}>
-            <span className="live-badge">● ESPACE MÉDIA JADCI</span>
-            <h2 style={styles.sectionTitle}>DIRECTS, PRÉDICATIONS & MÉDIAS</h2>
-            <p style={styles.sectionText}>
-              Un espace moderne pour regarder les directs, retrouver les prédications et suivre les grands rendez-vous de la JADCI.
-            </p>
-          </div>
-
-          <div style={styles.mediaHero}>
-            <div className="media-glow media-glow-1" />
-            <div className="media-glow media-glow-2" />
-            <div style={{ position: "relative", zIndex: 2 }}>
-              <span className={direct.actif ? "live-badge live-now" : "live-badge"}>
-                {direct.actif ? "● EN DIRECT" : "○ DIRECT À VENIR"}
-              </span>
-              <h3 style={{ margin: "18px 0 10px", fontSize: "clamp(28px, 4vw, 48px)", color: "#fff" }}>
-                {direct.titre}
-              </h3>
-              <p style={{ margin: "0 0 22px", color: "rgba(255,255,255,.82)", fontSize: "17px", lineHeight: 1.7, maxWidth: "680px" }}>
-                {direct.sousTitre}
-              </p>
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <button
-                  type="button"
-                  style={styles.button}
-                  onClick={() => window.open(direct.url, "_blank", "noopener,noreferrer")}
-                >
-                  {direct.actif ? "REGARDER LE DIRECT" : "OUVRIR LA CHAÎNE JADCI"}
-                </button>
-                <button
-                  type="button"
-                  style={styles.secondaryButton}
-                  onClick={() => setDirect((ancienne) => ({ ...ancienne, actif: !ancienne.actif }))}
-                >
-                  MODE DÉMO : {direct.actif ? "ARRÊTER" : "ACTIVER"}
-                </button>
-              </div>
-            </div>
-            <div className="media-play" aria-hidden="true">▶</div>
-          </div>
-        </section>
-
-        <section style={styles.section}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "end", gap: "20px", flexWrap: "wrap", marginBottom: "25px" }}>
-            <div>
-              <h3 style={styles.sectionTitle}>CONTENUS À LA UNE</h3>
-              <p style={styles.sectionText}>Prédications, événements et contenus vidéo.</p>
-            </div>
-            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-              {["TOUT", "PRÉDICATION", "ÉVÉNEMENT"].map((filtre) => (
-                <button
-                  key={filtre}
-                  type="button"
-                  style={mediaFiltre === filtre ? styles.button : styles.secondaryButton}
-                  onClick={() => setMediaFiltre(filtre)}
-                >
-                  {filtre}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={styles.cards}>
-            {mediasFiltres.map((media) => (
-              <article className="interactive-card media-card" style={styles.card} key={media.id}>
-                <div className="media-cover">
-                  <div className="media-cover-ring">
-                    <img src={logoJadci} alt="JADCI" />
-                  </div>
-                  <span>{media.type}</span>
-                </div>
-                <div style={{ paddingTop: "18px" }}>
-                  <div style={{ color: "#64748b", fontSize: "13px", fontWeight: 800, marginBottom: "7px" }}>{media.date} • {media.intervenant}</div>
-                  <h3 style={styles.cardTitle}>{media.titre}</h3>
-                  <p style={styles.cardText}>{media.description}</p>
-                  <button
-                    type="button"
-                    style={styles.secondaryButton}
-                    onClick={() => window.open(media.url, "_blank", "noopener,noreferrer")}
-                  >
-                    REGARDER / ÉCOUTER →
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        {adminConnecte && (
-          <section style={styles.section}>
-            <div style={styles.adminBox}>
-              <h3 style={styles.cardTitle}>CONFIGURATION DU DIRECT — MODE TEST</h3>
-              <p style={styles.sectionText}>
-                En production, cette zone pourra être reliée à YouTube Live, Facebook Live ou une solution de streaming dédiée.
-              </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "10px 18px", marginTop: "20px" }}>
-                <div>
-                  <label style={styles.label}>TITRE DU DIRECT</label>
-                  <input style={styles.input} value={direct.titre} onChange={(e) => setDirect((d) => ({ ...d, titre: e.target.value }))} />
-                </div>
-                <div>
-                  <label style={styles.label}>LIEN DU DIRECT / CHAÎNE</label>
-                  <input style={styles.input} value={direct.url} onChange={(e) => setDirect((d) => ({ ...d, url: e.target.value }))} />
-                </div>
-              </div>
-              <label style={styles.label}>MESSAGE</label>
-              <textarea style={{ ...styles.input, minHeight: "100px", resize: "vertical" }} value={direct.sousTitre} onChange={(e) => setDirect((d) => ({ ...d, sousTitre: e.target.value }))} />
-              <button type="button" style={styles.button} onClick={() => setDirect((d) => ({ ...d, actif: !d.actif }))}>
-                {direct.actif ? "DÉSACTIVER LE MODE DIRECT" : "ACTIVER LE MODE DIRECT"}
-              </button>
-            </div>
-          </section>
-        )}
-      </>
-    );
-  };
-
-  const renderAnnonces = () => (
-    <>
-      <section style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <span className="live-badge">● ACTUALITÉS JADCI</span>
-          <h2 style={styles.sectionTitle}>ANNONCES, PROGRAMMES & ARTICLES</h2>
-          <p style={styles.sectionText}>
-            Les communications officielles, les articles et les prochains programmes sont regroupés ici.
-          </p>
-        </div>
-
-        <div style={styles.cards}>
-          {articles.map((article) => (
-            <article className="interactive-card" style={styles.card} key={article.id}>
-              {article.image ? (
-                <img src={article.image} alt="" style={{ width: "100%", height: "210px", objectFit: "cover", borderRadius: "15px", marginBottom: "16px" }} />
-              ) : (
-                <div className="media-cover" style={{ marginBottom: "16px" }}>
-                  <div className="media-cover-ring"><img src={logoJadci} alt="JADCI" /></div>
-                  <span>{article.categorie}</span>
-                </div>
-              )}
-              <div style={{ color: "#64748b", fontSize: "13px", fontWeight: 800 }}>
-                {article.categorie} • {article.datePublication}
-                {article.dateEvenement ? ` • PROGRAMME : ${article.dateEvenement}` : ""}
-              </div>
-              <h3 style={styles.cardTitle}>{article.titre}</h3>
-              <p style={styles.cardText}>{article.contenu}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <h3 style={styles.sectionTitle}>CALENDRIER DES PROCHAINS PROGRAMMES</h3>
-        </div>
-        <div style={styles.cards}>
-          {articles.filter((a) => a.dateEvenement).sort((a, b) => a.dateEvenement.localeCompare(b.dateEvenement)).map((article) => (
-            <div className="interactive-card" style={styles.card} key={`event-${article.id}`}>
-              <div className="live-badge">{article.dateEvenement}</div>
-              <h4 style={styles.cardTitle}>{article.titre}</h4>
-              <p style={styles.cardText}>{article.contenu}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div style={styles.homeMediaStrip}>
-          <div>
-            <span className="live-badge">● SOLIDARITÉ</span>
-            <h3 style={{ margin: "14px 0 8px", color: "#fff", fontSize: "clamp(28px, 4vw, 40px)" }}>
-              Soutenir un projet JADCI
-            </h3>
-            <p style={{ margin: 0, color: "rgba(255,255,255,.78)", lineHeight: 1.7 }}>
-              Le soutien libre sera connecté au paiement sécurisé lorsque Supabase et le prestataire de paiement seront branchés.
-            </p>
-          </div>
-          <button type="button" style={styles.button} onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" })}>
-            VOIR LES PROJETS
-          </button>
-        </div>
-
-        <div style={{ ...styles.cards, marginTop: "22px" }}>
-          {projets.filter((p) => p.actif).map((p) => {
-            const objectif = Number(p.objectif) || 0;
-            const collecte = Number(p.collecte) || 0;
-            const pct = objectif ? Math.min(100, Math.round((collecte / objectif) * 100)) : 0;
-            return (
-              <article className="interactive-card" style={styles.card} key={p.id}>
-                {p.image && <img src={p.image} alt="" style={{ width: "100%", height: "180px", objectFit: "cover", borderRadius: "14px" }} />}
-                <h3 style={styles.cardTitle}>{p.titre}</h3>
-                <p style={styles.cardText}>{p.description}</p>
-                <div style={{ height: "9px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", background: "linear-gradient(90deg,#5420a8,#2456d8)" }} />
-                </div>
-                <p style={{ color: "#475569", fontWeight: 800 }}>
-                  {collecte.toLocaleString("fr-FR")} / {objectif.toLocaleString("fr-FR")} FCFA
-                </p>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                  <button type="button" style={styles.button} onClick={() => soutenirProjet(p.id, 1000)}>SOUTENIR 1 000 FCFA (TEST)</button>
-                  <button type="button" style={styles.secondaryButton} onClick={() => window.alert("Le paiement sécurisé sera branché avec Supabase / le prestataire de paiement.")}>PAIEMENT LIBRE</button>
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section style={styles.section}>
-        <div style={styles.card}>
-          <span className="live-badge">★ JEUNE LEADER DU MOIS</span>
-          <div style={{ display: "flex", gap: "22px", alignItems: "center", flexWrap: "wrap", marginTop: "18px" }}>
-            {leaderMois.photo ? (
-              <img src={leaderMois.photo} alt={leaderMois.nom} style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "50%", border: "6px solid #f1eaff" }} />
-            ) : (
-              <div style={{ width: "150px", height: "150px", borderRadius: "50%", display: "grid", placeItems: "center", background: "linear-gradient(135deg,#5420a8,#2456d8)", color: "#fff", fontSize: "48px" }}>★</div>
-            )}
-            <div style={{ flex: 1, minWidth: "240px" }}>
-              <h3 style={{ ...styles.sectionTitle, fontSize: "32px" }}>{leaderMois.nom}</h3>
-              <p style={styles.sectionText}>{leaderMois.presentation}</p>
-              <strong style={{ color: "#5420a8" }}>{leaderMois.mois}</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
-  )
-
+  /* ================================================================== */
+  /* RENDU VISUEL */
+  /* ================================================================== */
 
   return (
     <div style={styles.app}>
-
-      <style>{`
-        .admin-success {
-          padding: 13px 16px;
-          border-radius: 12px;
-          background: #ecfdf5;
-          border: 1px solid #a7f3d0;
-          color: #047857;
-          font-weight: 800;
-        }
-
-        @keyframes heroFloat {
-          0%, 100% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(.35deg); }
-        }
-
-        @keyframes logoFloat {
-          0%, 100% { transform: translateY(0) scale(1); }
-          50% { transform: translateY(-13px) scale(1.025); }
-        }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(24px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes shine {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-
-        @keyframes announcementIn {
-          from { opacity: 0; transform: translateY(18px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes orbit {
-          from { transform: rotate(0deg) translateX(175px) rotate(0deg); }
-          to { transform: rotate(360deg) translateX(175px) rotate(-360deg); }
-        }
-
-        @keyframes orbitReverse {
-          from { transform: rotate(360deg) translateX(220px) rotate(-360deg); }
-          to { transform: rotate(0deg) translateX(220px) rotate(0deg); }
-        }
-
-        @keyframes sparkle {
-          0%, 100% { opacity: .25; transform: scale(.65); }
-          50% { opacity: 1; transform: scale(1.25); }
-        }
-
-        @keyframes missionPulse {
-          0%, 100% { text-shadow: 0 0 0 rgba(253,224,71,0); }
-          50% { text-shadow: 0 0 22px rgba(253,224,71,.5); }
-        }
-
-        .reveal {
-          animation: fadeUp .8s cubic-bezier(.2,.8,.2,1) both;
-        }
-
-        .reveal-delay-1 { animation-delay: .08s; }
-        .reveal-delay-2 { animation-delay: .18s; }
-        .reveal-delay-3 { animation-delay: .28s; }
-
-        .gradient-text {
-          background: linear-gradient(90deg, #6428c7, #8b5cf6, #2456d8, #6428c7);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: shine 4s linear infinite;
-        }
-
-        .interactive-card {
-          transition: transform .28s ease, box-shadow .28s ease, border-color .28s ease;
-          will-change: transform;
-        }
-
-        .interactive-card:hover {
-          transform: translateY(-9px);
-          border-color: #c4b5fd;
-          box-shadow: 0 24px 55px rgba(76,29,149,.13) !important;
-        }
-
-        .announcementViewport {
-          overflow: hidden;
-        }
-
-        .announcementSlide {
-          display: inline-block;
-          animation: announcementIn .55s cubic-bezier(.2,.8,.2,1) both;
-        }
-
-        .hero-orbit {
-          position: absolute;
-          left: 50%;
-          top: 46%;
-          width: 10px;
-          height: 10px;
-          margin: -5px;
-          border-radius: 50%;
-          background: rgba(255,255,255,.9);
-          box-shadow: 0 0 18px rgba(255,255,255,.8);
-          pointer-events: none;
-        }
-
-        .hero-orbit-1 {
-          animation: orbit 9s linear infinite;
-        }
-
-        .hero-orbit-2 {
-          width: 7px;
-          height: 7px;
-          animation: orbitReverse 12s linear infinite;
-          opacity: .8;
-        }
-
-        .hero-spark {
-          position: absolute;
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: #fde047;
-          box-shadow: 0 0 20px rgba(253,224,71,.9);
-          animation: sparkle 2.8s ease-in-out infinite;
-          pointer-events: none;
-        }
-
-        .spark-1 { top: 18%; left: 16%; animation-delay: .2s; }
-        .spark-2 { top: 27%; right: 15%; animation-delay: .9s; }
-        .spark-3 { bottom: 18%; left: 20%; animation-delay: 1.5s; }
-
-        .mission-pulse {
-          animation: missionPulse 2.6s ease-in-out infinite;
-        }
-
-        .live-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          padding: 7px 11px;
-          border-radius: 999px;
-          background: rgba(255,255,255,.13);
-          color: #fde047;
-          border: 1px solid rgba(255,255,255,.18);
-          font-size: 12px;
-          font-weight: 900;
-          letter-spacing: .5px;
-        }
-
-        .live-now {
-          animation: missionPulse 1.7s ease-in-out infinite;
-        }
-
-        .media-glow {
-          position: absolute;
-          width: 260px;
-          height: 260px;
-          border-radius: 50%;
-          filter: blur(5px);
-          opacity: .28;
-          background: #8b5cf6;
-          animation: logoFloat 6s ease-in-out infinite;
-        }
-
-        .media-glow-1 { top: -100px; right: 8%; }
-        .media-glow-2 { bottom: -150px; left: 10%; background: #60a5fa; animation-delay: 1s; }
-
-        .media-play {
-          position: absolute;
-          right: 8%;
-          top: 50%;
-          transform: translateY(-50%);
-          width: 125px;
-          height: 125px;
-          border-radius: 50%;
-          display: grid;
-          place-items: center;
-          background: rgba(255,255,255,.12);
-          border: 1px solid rgba(255,255,255,.28);
-          color: #fff;
-          font-size: 38px;
-          box-shadow: 0 0 50px rgba(255,255,255,.12);
-          animation: logoFloat 3.8s ease-in-out infinite;
-        }
-
-        .media-cover img {
-          width: 100%;
-          height: 100%;
-          object-fit: contain;
-        }
-
-        .media-card {
-          overflow: hidden;
-        }
-
-        @media (max-width: 900px) {
-          .hero-orbit-1 { animation-duration: 12s; }
-          .hero-orbit-2 { animation-duration: 15s; }
-        }
-
-        @media (max-width: 900px) {
-          .media-play { display: none; }
-        }
-
-        @media (max-width: 640px) {
-          .mediaHero { padding: 35px 24px !important; }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after {
-            animation-duration: .01ms !important;
-            animation-iteration-count: 1 !important;
-            scroll-behavior: auto !important;
-          }
-        }
-      `}</style>
-
+      {/* HEADER */}
       <header style={styles.header}>
         <div style={styles.headerInner}>
-          <div style={styles.brand}>
-            <img
-              src={logoJadci}
-              alt="Logo JADCI"
-              style={styles.brandLogo}
-            />
-
+          <div style={styles.brand} onClick={() => aller("accueil")}>
+            <img src={logoJadci} alt="Logo JADCI" style={styles.brandLogo} />
             <div>
               <h1 style={styles.brandTitle}>JADCI</h1>
-              <p style={styles.brandSubtitle}>
-                Jeunesse des Assemblées de Dieu de Côte d'Ivoire
-              </p>
+              <p style={styles.brandSubtitle}>Jeunesse des Assemblées de Dieu de Côte d'Ivoire</p>
             </div>
           </div>
 
-          <nav style={styles.nav} aria-label="Navigation principale">
-            {navItems.map(([destination, label]) => (
-              <button
-                type="button"
-                key={destination}
-                style={styles.navButton(page === destination)}
-                onClick={() => aller(destination)}
-              >
-                {label}
-              </button>
-            ))}
+          <nav style={styles.nav}>
+            <button
+              style={styles.navButton(page === "accueil")}
+              onClick={() => aller("accueil")}
+            >
+              ACCUEIL
+            </button>
+            <button
+              style={styles.navButton(page === "actualites")}
+              onClick={() => aller("actualites")}
+            >
+              ACTUALITÉS
+            </button>
+            <button
+              style={styles.navButton(page === "boutique")}
+              onClick={() => aller("boutique")}
+            >
+              BOUTIQUE
+            </button>
+            <button
+              style={styles.navButton(page === "eglises")}
+              onClick={() => aller("eglises")}
+            >
+              ÉGLISES
+            </button>
+            <button
+              style={styles.navButton(page === "espaces")}
+              onClick={() => aller("espaces")}
+            >
+              ESPACES
+            </button>
+            <button
+              style={styles.navButton(page === "admin")}
+              onClick={() => aller("admin")}
+            >
+              PORTAIL ADMIN
+            </button>
           </nav>
         </div>
       </header>
 
-      <div style={styles.announcement}>
-        <div style={styles.announcementTitle}>ANNONCE</div>
-        <div style={styles.announcementText}>
-          {annonces[annonceActive] || "Bienvenue sur la plateforme officielle JADCI."}
+      {/* BANNEAU D'ANNONCES */}
+      {annonces.length > 0 && (
+        <div style={styles.announcement}>
+          <span style={styles.announcementTitle}>ANNONCE</span>
+          <span style={styles.announcementText}>{annonces[annonceActive]}</span>
         </div>
-      </div>
+      )}
 
+      {/* CONTENU PRINCIPAL */}
       <main style={styles.main}>
-        {page === "accueil" && renderAccueil()}
-        {page === "portail" && renderPortail()}
-        {page === "utilisateurs" && renderUtilisateurs()}
-        {page === "espaces" && renderEspaces()}
-        {page === "espace-jeune" && renderEspaceJeune()}
-        {page === "espace-responsable" && renderEspaceResponsable()}
-        {page === "espace-gerant" && renderEspaceGerant()}
-        {page === "eglises" && renderEglises()}
-        {page === "medias" && renderMedias()}
-        {page === "boutique" && renderBoutique()}
-        {page === "annonces" && renderAnnonces()}
+        {/* PAGE ACCUEIL */}
+        {page === "accueil" && (
+          <section>
+            <div style={styles.hero}>
+              {heroBackgrounds.map((bg, idx) => (
+                <div
+                  key={idx}
+                  style={styles.heroBackgroundLayer(bg, idx === indexFond)}
+                />
+              ))}
+
+              <div style={styles.heroContent}>
+                <span style={styles.badge}>Mouvement National de la Jeunesse</span>
+                <h1 style={styles.heroTitle}>
+                  Bienvenue sur la plateforme <span style={styles.purple}>JADCI</span>
+                </h1>
+                <p style={styles.heroText}>
+                  Un espace unifié pour impacter, former, connecter la jeunesse chrétienne et valoriser
+                  chaque jeune et responsable au service du Royaume.
+                </p>
+                <div style={styles.heroActions}>
+                  <button style={styles.button} onClick={() => aller("espaces")}>
+                    Rejoindre l'Espace Personnel
+                  </button>
+                  <button style={styles.secondaryButton} onClick={() => aller("actualites")}>
+                    Consulter les Actualités
+                  </button>
+                </div>
+              </div>
+
+              <div style={styles.heroCard}>
+                <div style={styles.heroLogoCircle}>
+                  <img src={logoJadci} alt="Logo JADCI" style={{ width: "100%" }} />
+                </div>
+                <h3 style={{ margin: 0, marginBottom: "8px", fontSize: "16px", fontWeight: "700" }}>
+                  Jeunesse, Foi & Action
+                </h3>
+                <p style={{ margin: 0, fontSize: "13px", lineHeight: 1.4 }}>
+                  Trouvez votre église, participez aux projets et accédez à vos ressources officielles.
+                </p>
+              </div>
+            </div>
+
+            {direct.actif && (
+              <div style={{ ...styles.card, backgroundColor: "#f0f4ff", marginTop: "30px" }}>
+                <h3 style={{ marginTop: 0, color: "#5420a8" }}>DIRECT JADCI</h3>
+                <p>
+                  <strong>{direct.titre}</strong> - {direct.sousTitre}
+                </p>
+                <div style={{ display: "flex", gap: "12px", marginTop: "15px" }}>
+                  {direct.youtubeUrl && (
+                    <a href={direct.youtubeUrl} target="_blank" rel="noopener noreferrer" style={styles.button}>
+                      Regarder sur YouTube
+                    </a>
+                  )}
+                  {direct.facebookUrl && (
+                    <a href={direct.facebookUrl} target="_blank" rel="noopener noreferrer" style={styles.button}>
+                      Suivre sur Facebook
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* PAGE ACTUALITÉS */}
+        {page === "actualites" && (
+          <section>
+            <h2 style={styles.pageTitle}>Actualités et Médiathèque JADCI</h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+              {articles.map((art) => (
+                <div key={art.id} style={styles.card}>
+                  <span style={{ fontSize: "12px", fontWeight: "600", color: "#7c3aed" }}>
+                    {art.categorie} — {art.datePublication}
+                  </span>
+                  <h3 style={{ marginTop: "12px", marginBottom: "8px" }}>{art.titre}</h3>
+                  <p style={{ fontSize: "14px", lineHeight: 1.6, color: "#475569" }}>{art.contenu}</p>
+                  {art.image && (
+                    <img src={art.image} alt={art.titre} style={{ width: "100%", borderRadius: "8px", marginTop: "12px" }} />
+                  )}
+                  {art.videoUrl && (
+                    <a href={art.videoUrl} target="_blank" rel="noopener noreferrer" style={{ ...styles.button, display: "inline-block", marginTop: "12px" }}>
+                      Visionner la vidéo
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* PAGE BOUTIQUE */}
+        {page === "boutique" && (
+          <section>
+            <h2 style={styles.pageTitle}>Boutique Officielle JADCI</h2>
+            {commandeMessage && <div style={styles.alertBox}>{commandeMessage}</div>}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px", marginTop: "30px" }}>
+              {/* Produits */}
+              <div>
+                <h3>Nos Produits</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "15px" }}>
+                  {produits.map((p) => (
+                    <div key={p.id} style={styles.card}>
+                      {p.image ? (
+                        <img src={p.image} alt={p.nom} style={{ width: "100%", height: "200px", objectFit: "cover", borderRadius: "8px" }} />
+                      ) : (
+                        <div style={{ width: "100%", height: "200px", backgroundColor: "#e2e8f0", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          Image indisponible
+                        </div>
+                      )}
+                      <span style={{ display: "inline-block", fontSize: "11px", fontWeight: "600", color: "#7c3aed", marginTop: "12px" }}>
+                        {p.categorie}
+                      </span>
+                      <h4 style={{ margin: "8px 0" }}>{p.nom}</h4>
+                      <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "10px" }}>{p.description}</p>
+                      <p style={{ fontSize: "16px", fontWeight: "700", color: "#5420a8", marginBottom: "8px" }}>
+                        {p.prix.toLocaleString("fr-FR")} FCFA
+                      </p>
+                      <div style={{ marginBottom: "12px", fontSize: "12px", color: p.stock > 0 ? "#16a34a" : "#dc2626", fontWeight: "600" }}>
+                        Stock : {p.stock > 0 ? `${p.stock} unités` : "Rupture"}
+                      </div>
+                      <button
+                        style={{ ...styles.button, width: "100%" }}
+                        onClick={() => ajouterAuPanier(p)}
+                        disabled={p.stock === 0}
+                      >
+                        Ajouter au panier
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Panier */}
+              <div>
+                <h3>Votre Panier</h3>
+                <div style={styles.card}>
+                  {panier.length === 0 ? (
+                    <p style={{ color: "#64748b" }}>Votre panier est vide.</p>
+                  ) : (
+                    <>
+                      {panier.map((item) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            paddingBottom: "12px",
+                            marginBottom: "12px",
+                            borderBottom: "1px solid #e2e8f0",
+                          }}
+                        >
+                          <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, fontWeight: "600" }}>{item.nom}</p>
+                            <p style={{ margin: "4px 0 0 0", fontSize: "13px", color: "#64748b" }}>
+                              {item.prix.toLocaleString("fr-FR")} FCFA
+                            </p>
+                          </div>
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <button style={styles.smallBtn} onClick={() => modifierQuantite(item.id, -1)}>
+                              -
+                            </button>
+                            <span style={{ minWidth: "30px", textAlign: "center" }}>{item.quantite}</span>
+                            <button style={styles.smallBtn} onClick={() => modifierQuantite(item.id, 1)}>
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "2px solid #e2e8f0" }}>
+                        <p style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a" }}>
+                          Total : {totalPanier.toLocaleString("fr-FR")} FCFA
+                        </p>
+                        <button
+                          style={{ ...styles.button, width: "100%", marginTop: "12px" }}
+                          onClick={passerCommandeBoutique}
+                        >
+                          Passer la commande
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* PAGE ÉGLISES */}
+        {page === "eglises" && (
+          <section>
+            <h2 style={styles.pageTitle}>Annuaire des Églises Assemblées de Dieu</h2>
+            <input
+              type="text"
+              placeholder="Rechercher une église par nom, ville ou quartier..."
+              value={rechercheEglise}
+              onChange={(e) => setRechercheEglise(e.target.value)}
+              style={{ ...styles.input, marginBottom: "20px", maxWidth: "500px" }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
+              {eglisesFiltrees.map((e) => (
+                <div key={e.id} style={styles.card}>
+                  <h3 style={{ marginTop: 0, color: "#5420a8" }}>{e.nom}</h3>
+                  <p style={{ margin: "8px 0", fontSize: "13px" }}>
+                    <strong>Pasteur :</strong> {e.pasteur}
+                  </p>
+                  <p style={{ margin: "8px 0", fontSize: "13px" }}>
+                    <strong>Ville/Commune :</strong> {e.ville} {e.commune && `(${e.commune})`}
+                  </p>
+                  <p style={{ margin: "8px 0", fontSize: "13px" }}>
+                    <strong>Quartier :</strong> {e.quartier || "N/A"}
+                  </p>
+                  <p style={{ margin: "8px 0", fontSize: "13px" }}>
+                    <strong>Contact :</strong> {e.telephone || "N/A"}
+                  </p>
+                  {e.localisation && (
+                    <a href={e.localisation} target="_blank" rel="noopener noreferrer" style={{ ...styles.button, display: "inline-block", marginTop: "12px", fontSize: "13px" }}>
+                      Voir sur Google Maps
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* PAGE ESPACES */}
+        {page === "espaces" && (
+          <section>
+            {!jeuneConnecte && !responsableConnecte ? (
+              // Sélection du type d'espace
+              <>
+                <h2 style={styles.pageTitle}>Vos Espaces Personnels</h2>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px", marginBottom: "40px" }}>
+                  <button
+                    style={{
+                      ...styles.card,
+                      padding: "30px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      border: typeEspaceForm === "jeune" ? "3px solid #5420a8" : "1px solid #e2e8f0",
+                      backgroundColor: typeEspaceForm === "jeune" ? "#f5f3ff" : "#ffffff",
+                    }}
+                    onClick={() => {
+                      setTypeEspaceForm("jeune");
+                      setMessageEspace("");
+                    }}
+                  >
+                    <h3 style={{ marginTop: 0, color: "#5420a8" }}>Espace Jeune</h3>
+                    <p style={{ color: "#64748b" }}>
+                      Inscription et connexion pour les jeunes membres de la JADCI
+                    </p>
+                  </button>
+
+                  <button
+                    style={{
+                      ...styles.card,
+                      padding: "30px",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      border: typeEspaceForm === "responsable" ? "3px solid #5420a8" : "1px solid #e2e8f0",
+                      backgroundColor: typeEspaceForm === "responsable" ? "#f5f3ff" : "#ffffff",
+                    }}
+                    onClick={() => {
+                      setTypeEspaceForm("responsable");
+                      setMessageEspace("");
+                    }}
+                  >
+                    <h3 style={{ marginTop: 0, color: "#5420a8" }}>Espace Responsable</h3>
+                    <p style={{ color: "#64748b" }}>
+                      Inscription et connexion pour les responsables et pasteurs
+                    </p>
+                  </button>
+                </div>
+
+                {/* Formulaire */}
+                <div style={{ maxWidth: "500px", margin: "0 auto" }}>
+                  <h3 style={{ textAlign: "center" }}>
+                    {modeEspace === "connexion" ? "Connexion" : "Inscription"} -{" "}
+                    {typeEspaceForm === "jeune" ? "Jeune JADCI" : "Responsable JADCI"}
+                  </h3>
+                  {messageEspace && <div style={styles.alertBox}>{messageEspace}</div>}
+
+                  {modeEspace === "connexion" ? (
+                    <form onSubmit={traiterConnexion}>
+                      <input
+                        type="email"
+                        placeholder="Adresse email"
+                        value={formConnexion.email}
+                        onChange={(e) => setFormConnexion({ ...formConnexion, email: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <input
+                        type="password"
+                        placeholder="Mot de passe"
+                        value={formConnexion.motDePasse}
+                        onChange={(e) => setFormConnexion({ ...formConnexion, motDePasse: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <button type="submit" style={{ ...styles.button, width: "100%" }}>
+                        Se connecter
+                      </button>
+                      <p style={{ textAlign: "center", marginTop: "16px", fontSize: "14px", color: "#64748b" }}>
+                        Pas encore de compte?{" "}
+                        <button
+                          type="button"
+                          style={{ background: "none", border: "none", color: "#5420a8", fontWeight: "600", cursor: "pointer" }}
+                          onClick={() => setModeEspace("inscription")}
+                        >
+                          S'inscrire
+                        </button>
+                      </p>
+                    </form>
+                  ) : (
+                    <form onSubmit={traiterInscription}>
+                      <input
+                        type="text"
+                        placeholder="Nom complet"
+                        value={formInscription.nom}
+                        onChange={(e) => setFormInscription({ ...formInscription, nom: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <select
+                        value={formInscription.genre}
+                        onChange={(e) => setFormInscription({ ...formInscription, genre: e.target.value })}
+                        style={styles.input}
+                      >
+                        <option value="HOMME">Homme</option>
+                        <option value="FEMME">Femme</option>
+                      </select>
+                      <label style={{ display: "flex", alignItems: "center", marginBottom: "12px", fontSize: "14px" }}>
+                        <input
+                          type="checkbox"
+                          checked={formInscription.nationaliteIvoirienne}
+                          onChange={(e) => setFormInscription({ ...formInscription, nationaliteIvoirienne: e.target.checked })}
+                          style={{ marginRight: "8px" }}
+                        />
+                        Nationalité Ivoirienne
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="Téléphone"
+                        value={formInscription.telephone}
+                        onChange={(e) => setFormInscription({ ...formInscription, telephone: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <input
+                        type="email"
+                        placeholder="Adresse email"
+                        value={formInscription.email}
+                        onChange={(e) => setFormInscription({ ...formInscription, email: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <input
+                        type="password"
+                        placeholder="Mot de passe"
+                        value={formInscription.motDePasse}
+                        onChange={(e) => setFormInscription({ ...formInscription, motDePasse: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <input
+                        type="password"
+                        placeholder="Confirmer le mot de passe"
+                        value={formInscription.confirmation}
+                        onChange={(e) => setFormInscription({ ...formInscription, confirmation: e.target.value })}
+                        style={styles.input}
+                        required
+                      />
+                      <button type="submit" style={{ ...styles.button, width: "100%" }}>
+                        Créer mon compte
+                      </button>
+                      <p style={{ textAlign: "center", marginTop: "16px", fontSize: "14px", color: "#64748b" }}>
+                        Déjà inscrit?{" "}
+                        <button
+                          type="button"
+                          style={{ background: "none", border: "none", color: "#5420a8", fontWeight: "600", cursor: "pointer" }}
+                          onClick={() => setModeEspace("connexion")}
+                        >
+                          Se connecter
+                        </button>
+                      </p>
+                    </form>
+                  )}
+                </div>
+              </>
+            ) : (
+              // Espace Personnel Connecté
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+                  <h2 style={styles.pageTitle}>
+                    {jeuneConnecte ? "Espace Personnel Jeune" : "Espace Responsable JADCI"}
+                  </h2>
+                  <button style={styles.button} onClick={deconnecterTout}>
+                    Déconnexion
+                  </button>
+                </div>
+
+                {(() => {
+                  const compteActif = jeuneConnecte || responsableConnecte;
+                  return (
+                    <>
+                      {/* Profil */}
+                      <div style={styles.card}>
+                        <h3>Profil Utilisateur</h3>
+                        <p>Nom : <strong>{compteActif.nom}</strong></p>
+                        <p>Matricule unique : <strong>{compteActif.matricule}</strong></p>
+                        <p>Email : <strong>{compteActif.email}</strong></p>
+                        <p>Téléphone : <strong>{compteActif.telephone}</strong></p>
+                        <p>Membre depuis : <strong>{compteActif.dateCreation}</strong></p>
+                      </div>
+
+                      {/* Église pour Responsable */}
+                      {responsableConnecte && (
+                        <div style={{ ...styles.card, marginTop: "20px" }}>
+                          <h3>Enregistrer une Église</h3>
+                          <form onSubmit={soumettreNouvelleEglise} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                            <input type="text" name="nom" placeholder="Nom de l'église" style={styles.input} required />
+                            <input type="text" name="pasteur" placeholder="Nom du pasteur" style={styles.input} required />
+                            <input type="tel" name="telephone" placeholder="Téléphone" style={styles.input} required />
+                            <input type="text" name="ville" placeholder="Ville" style={styles.input} required />
+                            <input type="text" name="commune" placeholder="Commune" style={styles.input} />
+                            <input type="text" name="quartier" placeholder="Quartier" style={styles.input} />
+                            <input
+                              type="url"
+                              name="localisation"
+                              placeholder="Lien Google Maps"
+                              style={{ ...styles.input, gridColumn: "1 / -1" }}
+                            />
+                            <button type="submit" style={{ ...styles.button, gridColumn: "1 / -1" }}>
+                              Proposer l'église
+                            </button>
+                          </form>
+                        </div>
+                      )}
+
+                      {/* Commandes */}
+                      <div style={{ ...styles.card, marginTop: "20px" }}>
+                        <h3>Vos Commandes et Reçus</h3>
+                        {(compteActif.commandes || []).length === 0 ? (
+                          <p style={{ color: "#64748b" }}>Aucune commande enregistrée pour le moment.</p>
+                        ) : (
+                          <div style={{ display: "grid", gap: "12px" }}>
+                            {compteActif.commandes.map((cmd) => (
+                              <div key={cmd.id} style={{ padding: "12px", backgroundColor: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
+                                  <div>
+                                    <p style={{ margin: "0 0 8px 0", fontWeight: "600" }}>
+                                      Réf : {cmd.ref || "CMD-" + cmd.id} — Date : {cmd.date}
+                                    </p>
+                                    <p style={{ margin: 0, fontSize: "14px", color: "#64748b" }}>
+                                      Total : {cmd.total.toLocaleString("fr-FR")} FCFA
+                                    </p>
+                                  </div>
+                                  <span
+                                    style={{
+                                      padding: "4px 12px",
+                                      borderRadius: "20px",
+                                      fontSize: "12px",
+                                      fontWeight: "600",
+                                      backgroundColor: cmd.statut === "PAYÉE" ? "#d1fae5" : "#fed7aa",
+                                      color: cmd.statut === "PAYÉE" ? "#065f46" : "#92400e",
+                                    }}
+                                  >
+                                    {cmd.statut}
+                                  </span>
+                                </div>
+                                {cmd.statut !== "PAYÉE" ? (
+                                  <button
+                                    style={{ ...styles.button, marginTop: "12px", fontSize: "13px" }}
+                                    onClick={() => payerCommandeDepuisEspace(cmd.id)}
+                                  >
+                                    Payer en ligne
+                                  </button>
+                                ) : (
+                                  <button
+                                    style={{ ...styles.button, marginTop: "12px", fontSize: "13px" }}
+                                    onClick={() => genererRecuPDF_A4(cmd, compteActif)}
+                                  >
+                                    Télécharger Reçu PDF
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
+              </>
+            )}
+          </section>
+        )}
+
+        {/* PAGE ADMIN */}
+        {page === "admin" && (
+          <section>
+            {!adminSession ? (
+              // Connexion Admin
+              <div style={{ maxWidth: "400px", margin: "0 auto" }}>
+                <h2 style={{ textAlign: "center" }}>Portail Administration JADCI</h2>
+                {erreurAdmin && <div style={styles.alertBox}>{erreurAdmin}</div>}
+                <form onSubmit={connecterAdmin}>
+                  <input
+                    type="text"
+                    placeholder="Matricule Administrateur"
+                    value={identifiantAdminInput}
+                    onChange={(e) => setIdentifiantAdminInput(e.target.value)}
+                    style={styles.input}
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="Mot de passe"
+                    value={motDePasseAdminInput}
+                    onChange={(e) => setMotDePasseAdminInput(e.target.value)}
+                    style={styles.input}
+                    required
+                  />
+                  <button type="submit" style={{ ...styles.button, width: "100%" }}>
+                    Se connecter au Portail
+                  </button>
+                </form>
+              </div>
+            ) : (
+              // Panneau Admin
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
+                  <h2 style={styles.pageTitle}>Panneau de Contrôle Admin</h2>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ margin: "0 0 8px 0", fontSize: "13px", color: "#64748b" }}>
+                      Connecté en tant que : <strong>{adminSession.label}</strong> ({adminSession.role})
+                    </p>
+                    <button style={styles.button} onClick={() => setAdminSession(null)}>
+                      Déconnexion Admin
+                    </button>
+                  </div>
+                </div>
+
+                {/* Tabs Admin */}
+                <div style={{ display: "flex", gap: "8px", marginBottom: "20px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
+                  <button
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: "8px 8px 0 0",
+                      border: "none",
+                      backgroundColor: adminTab === "dashboard" ? "#5420a8" : "#f1f5f9",
+                      color: adminTab === "dashboard" ? "#ffffff" : "#475569",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => setAdminTab("dashboard")}
+                  >
+                    Tableau de bord
+                  </button>
+                  {(adminSession.role === "GENERAL" || adminSession.role === "COM") && (
+                    <button
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px 8px 0 0",
+                        border: "none",
+                        backgroundColor: adminTab === "communication" ? "#5420a8" : "#f1f5f9",
+                        color: adminTab === "communication" ? "#ffffff" : "#475569",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setAdminTab("communication")}
+                    >
+                      Communication
+                    </button>
+                  )}
+                  {(adminSession.role === "GENERAL" || adminSession.role === "MARKETING") && (
+                    <button
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px 8px 0 0",
+                        border: "none",
+                        backgroundColor: adminTab === "marketing" ? "#5420a8" : "#f1f5f9",
+                        color: adminTab === "marketing" ? "#ffffff" : "#475569",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setAdminTab("marketing")}
+                    >
+                      Boutique & Produits
+                    </button>
+                  )}
+                  {adminSession.role === "GENERAL" && (
+                    <button
+                      style={{
+                        padding: "8px 16px",
+                        borderRadius: "8px 8px 0 0",
+                        border: "none",
+                        backgroundColor: adminTab === "eglises" ? "#5420a8" : "#f1f5f9",
+                        color: adminTab === "eglises" ? "#ffffff" : "#475569",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => setAdminTab("eglises")}
+                    >
+                      Validation Églises
+                    </button>
+                  )}
+                </div>
+
+                {/* TAB Dashboard */}
+                {adminTab === "dashboard" && (
+                  <div>
+                    <h3>Statistiques Plateforme</h3>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "30px" }}>
+                      <div style={styles.card}>
+                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Jeunes Inscrits</p>
+                        <p style={{ margin: "8px 0 0 0", fontSize: "28px", fontWeight: "700", color: "#5420a8" }}>
+                          {comptesJeunes.length}
+                        </p>
+                      </div>
+                      <div style={styles.card}>
+                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Responsables</p>
+                        <p style={{ margin: "8px 0 0 0", fontSize: "28px", fontWeight: "700", color: "#5420a8" }}>
+                          {comptesResponsables.length}
+                        </p>
+                      </div>
+                      <div style={styles.card}>
+                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Églises Validées</p>
+                        <p style={{ margin: "8px 0 0 0", fontSize: "28px", fontWeight: "700", color: "#5420a8" }}>
+                          {eglisesValidees.length}
+                        </p>
+                      </div>
+                      <div style={styles.card}>
+                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Produits Boutique</p>
+                        <p style={{ margin: "8px 0 0 0", fontSize: "28px", fontWeight: "700", color: "#5420a8" }}>
+                          {produits.length}
+                        </p>
+                      </div>
+                      <div style={styles.card}>
+                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Commandes Payées</p>
+                        <p style={{ margin: "8px 0 0 0", fontSize: "28px", fontWeight: "700", color: "#16a34a" }}>
+                          {nombreCommandes}
+                        </p>
+                      </div>
+                      <div style={styles.card}>
+                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>Chiffre d'affaires (FCFA)</p>
+                        <p style={{ margin: "8px 0 0 0", fontSize: "22px", fontWeight: "700", color: "#16a34a" }}>
+                          {totalPayements.toLocaleString("fr-FR")}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={styles.card}>
+                      <h3>Exports des Données</h3>
+                      <p style={{ color: "#64748b", marginBottom: "16px" }}>
+                        Téléchargez les données de la plateforme pour exploitation en Excel.
+                      </p>
+                      <button style={{ ...styles.button, width: "100%" }} onClick={exporterToutesDonneesExcel}>
+                        Exporter Toutes les Données (Excel)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB Communication */}
+                {adminTab === "communication" && (
+                  <div>
+                    <h3>Gestion du Banneau d'Annonces</h3>
+                    <div style={styles.card}>
+                      <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                        <input
+                          type="text"
+                          placeholder="Nouvelle annonce"
+                          value={nouvelleAnnonce}
+                          onChange={(e) => setNouvelleAnnonce(e.target.value)}
+                          style={{ ...styles.input, marginBottom: 0, flex: 1 }}
+                        />
+                        <button
+                          style={styles.button}
+                          onClick={() => {
+                            if (!nouvelleAnnonce.trim()) return;
+                            setAnnonces((prev) => [...prev, nouvelleAnnonce.trim()]);
+                            setNouvelleAnnonce("");
+                          }}
+                        >
+                          Ajouter
+                        </button>
+                      </div>
+                      <div style={{ display: "grid", gap: "8px" }}>
+                        {annonces.map((ann, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              padding: "12px",
+                              backgroundColor: "#f8fafc",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            <p style={{ margin: 0, flex: 1 }}>{ann}</p>
+                            <button
+                              style={styles.smallBtn}
+                              onClick={() => setAnnonces((prev) => prev.filter((_, i) => i !== idx))}
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB Marketing */}
+                {adminTab === "marketing" && (
+                  <div>
+                    <h3>Ajouter un Produit à la Boutique</h3>
+                    <div style={styles.card}>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                        <input
+                          type="text"
+                          placeholder="Nom du produit"
+                          value={nouveauProduit.nom}
+                          onChange={(e) => setNouveauProduit({ ...nouveauProduit, nom: e.target.value })}
+                          style={styles.input}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Prix (FCFA)"
+                          value={nouveauProduit.prix}
+                          onChange={(e) => setNouveauProduit({ ...nouveauProduit, prix: Number(e.target.value) })}
+                          style={styles.input}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Stock"
+                          value={nouveauProduit.stock}
+                          onChange={(e) => setNouveauProduit({ ...nouveauProduit, stock: Number(e.target.value) })}
+                          style={styles.input}
+                        />
+                        <select
+                          value={nouveauProduit.categorie}
+                          onChange={(e) => setNouveauProduit({ ...nouveauProduit, categorie: e.target.value })}
+                          style={styles.input}
+                        >
+                          <option value="VÊTEMENTS">Vêtements</option>
+                          <option value="LIVRES">Livres</option>
+                          <option value="GADGETS">Gadgets</option>
+                          <option value="SERVICES">Services</option>
+                        </select>
+                      </div>
+                      <textarea
+                        placeholder="Description du produit"
+                        value={nouveauProduit.description}
+                        onChange={(e) => setNouveauProduit({ ...nouveauProduit, description: e.target.value })}
+                        style={{ ...styles.input, height: "80px", marginBottom: "16px" }}
+                      />
+                      <button
+                        style={{ ...styles.button, width: "100%" }}
+                        onClick={() => {
+                          if (!nouveauProduit.nom || !nouveauProduit.prix) {
+                            alert("Remplissez le nom et le prix.");
+                            return;
+                          }
+                          setProduits((prev) => [...prev, { ...nouveauProduit, id: Date.now() }]);
+                          setNouveauProduit({
+                            nom: "",
+                            prix: 0,
+                            categorie: "VÊTEMENTS",
+                            description: "",
+                            stock: 10,
+                            image: "",
+                          });
+                          alert("Produit ajouté.");
+                        }}
+                      >
+                        Enregistrer le Produit
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB Églises */}
+                {adminTab === "eglises" && (
+                  <div>
+                    <h3>Valider les Églises Soumises</h3>
+                    {eglises.filter((e) => e.statut === "EN ATTENTE").length === 0 ? (
+                      <p style={styles.alertBox}>Aucune église en attente de validation.</p>
+                    ) : (
+                      <div style={{ display: "grid", gap: "12px" }}>
+                        {eglises
+                          .filter((e) => e.statut === "EN ATTENTE")
+                          .map((e) => (
+                            <div key={e.id} style={styles.card}>
+                              <h4 style={{ margin: "0 0 8px 0" }}>
+                                {e.nom} — Pasteur : {e.pasteur}
+                              </h4>
+                              <p style={{ margin: "4px 0", fontSize: "13px", color: "#64748b" }}>
+                                Ville : {e.ville} ({e.commune}) | Tel : {e.telephone}
+                              </p>
+                              <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+                                <button
+                                  style={styles.button}
+                                  onClick={() =>
+                                    setEglises((prev) =>
+                                      prev.map((item) => (item.id === e.id ? { ...item, statut: "VALIDÉE" } : item))
+                                    )
+                                  }
+                                >
+                                  Valider
+                                </button>
+                                <button
+                                  style={{ ...styles.button, backgroundColor: "#dc2626" }}
+                                  onClick={() => setEglises((prev) => prev.filter((item) => item.id !== e.id))}
+                                >
+                                  Refuser
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
       </main>
-
-      <footer style={styles.footer}>
-        <img
-          className="interactive-card"
-          src={logoJadci}
-          alt="Logo JADCI"
-          style={styles.footerLogo}
-        />
-
-        <h3 style={{ margin: "0 0 8px", fontSize: "24px" }}>JADCI</h3>
-
-        <p style={{ margin: "0 0 8px", opacity: 0.85 }}>
-          JEUNESSE DES ASSEMBLÉES DE DIEU DE CÔTE D'IVOIRE
-        </p>
-
-        <strong style={{ color: "#fde047" }}>FOI • SERVICE • MISSION</strong>
-
-        <p
-          style={{
-            marginTop: "22px",
-            opacity: 0.5,
-            fontSize: "12px",
-          }}
-        >
-          Plateforme JADCI — Version de développement
-        </p>
-      </footer>
     </div>
   );
 }
 
-export default App;
+/* ================================================================== */
+/* STYLES INLINE */
+/* ================================================================== */
+
+const styles = {
+  app: {
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+    backgroundColor: "#f8fafc",
+    minHeight: "100vh",
+    color: "#1e293b",
+  },
+  header: {
+    backgroundColor: "#ffffff",
+    borderBottom: "1px solid #e2e8f0",
+    position: "sticky",
+    top: 0,
+    zIndex: 100,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+  },
+  headerInner: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "12px 20px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    cursor: "pointer",
+  },
+  brandLogo: {
+    height: "45px",
+    width: "auto",
+  },
+  brandTitle: {
+    margin: 0,
+    fontSize: "20px",
+    fontWeight: "800",
+    color: "#5420a8",
+  },
+  brandSubtitle: {
+    margin: 0,
+    fontSize: "11px",
+    color: "#64748b",
+  },
+  nav: {
+    display: "flex",
+    gap: "8px",
+  },
+  navButton: (active) => ({
+    padding: "8px 14px",
+    borderRadius: "8px",
+    border: "none",
+    backgroundColor: active ? "#5420a8" : "transparent",
+    color: active ? "#ffffff" : "#475569",
+    fontWeight: active ? "600" : "500",
+    fontSize: "13px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  }),
+  announcement: {
+    backgroundColor: "#5420a8",
+    color: "#ffffff",
+    padding: "8px 20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    fontSize: "13px",
+    animation: "slide 10s linear infinite",
+  },
+  announcementTitle: {
+    fontWeight: "700",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    padding: "2px 8px",
+    borderRadius: "4px",
+    fontSize: "11px",
+  },
+  announcementText: {
+    flex: 1,
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  },
+  main: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    padding: "30px 20px",
+  },
+  pageTitle: {
+    fontSize: "28px",
+    fontWeight: "800",
+    marginBottom: "20px",
+    color: "#0f172a",
+  },
+  hero: {
+    position: "relative",
+    borderRadius: "20px",
+    overflow: "hidden",
+    padding: "60px 40px",
+    color: "#ffffff",
+    marginBottom: "30px",
+    minHeight: "360px",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  heroBackgroundLayer: (bg, active) => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundImage: `linear-gradient(135deg, rgba(84, 32, 168, 0.9), rgba(15, 23, 42, 0.75)), url(${bg})`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    opacity: active ? 1 : 0,
+    transition: "opacity 1s ease-in-out",
+    zIndex: 1,
+  }),
+  heroContent: {
+    position: "relative",
+    zIndex: 2,
+    maxWidth: "600px",
+  },
+  badge: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    padding: "4px 12px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+  heroTitle: {
+    fontSize: "36px",
+    fontWeight: "800",
+    margin: "15px 0",
+    lineHeight: 1.2,
+  },
+  purple: {
+    color: "#c084fc",
+  },
+  heroText: {
+    fontSize: "16px",
+    opacity: 0.9,
+    lineHeight: 1.5,
+    marginBottom: "25px",
+  },
+  heroActions: {
+    display: "flex",
+    gap: "12px",
+  },
+  heroCard: {
+    position: "relative",
+    zIndex: 2,
+    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backdropFilter: "blur(10px)",
+    padding: "24px",
+    borderRadius: "16px",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    maxWidth: "280px",
+    textAlign: "center",
+  },
+  heroLogoCircle: {
+    width: "70px",
+    height: "70px",
+    borderRadius: "50%",
+    backgroundColor: "#ffffff",
+    padding: "8px",
+    margin: "0 auto 12px",
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: "12px",
+    padding: "20px",
+    border: "1px solid #e2e8f0",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+  },
+  button: {
+    backgroundColor: "#5420a8",
+    color: "#ffffff",
+    border: "none",
+    padding: "10px 18px",
+    borderRadius: "8px",
+    fontWeight: "600",
+    fontSize: "14px",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+  },
+  secondaryButton: {
+    backgroundColor: "transparent",
+    color: "#ffffff",
+    border: "1px solid rgba(255, 255, 255, 0.4)",
+    padding: "10px 18px",
+    borderRadius: "8px",
+    fontWeight: "600",
+    fontSize: "14px",
+    cursor: "pointer",
+  },
+  smallBtn: {
+    backgroundColor: "#f1f5f9",
+    color: "#475569",
+    border: "none",
+    padding: "6px 12px",
+    borderRadius: "6px",
+    fontWeight: "600",
+    cursor: "pointer",
+    fontSize: "12px",
+  },
+  input: {
+    width: "100%",
+    padding: "10px 14px",
+    borderRadius: "8px",
+    border: "1px solid #cbd5e1",
+    marginBottom: "12px",
+    fontSize: "14px",
+    boxSizing: "border-box",
+  },
+  alertBox: {
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+    color: "#166534",
+    padding: "12px",
+    borderRadius: "8px",
+    marginBottom: "20px",
+    fontSize: "14px",
+  },
+};
