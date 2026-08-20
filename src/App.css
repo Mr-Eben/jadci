@@ -1,25 +1,54 @@
 /* =========================================================
-   JADCI — App.css
-   Design system premium / institutionnel / responsive
-   Compatible avec App.jsx actuel
+   JADCI — APP.CSS
+   Design moderne + animations + images
+   Compatible avec l'App.jsx fourni
+   ========================================================= */
+
+/* =========================================================
+   1. IMPORTS
+   ========================================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+
+
+/* =========================================================
+   2. VARIABLES
    ========================================================= */
 
 :root {
-  --jadci-blue: #2456d8;
-  --jadci-blue-dark: #183a9c;
-  --jadci-purple: #6428c7;
-  --jadci-purple-dark: #4e2096;
-  --jadci-yellow: #fde047;
-  --jadci-ink: #111827;
-  --jadci-navy: #172554;
-  --jadci-muted: #64748b;
-  --jadci-line: #e8e3f3;
-  --jadci-soft: #f8f7ff;
-  --jadci-white: #ffffff;
-  --jadci-shadow: 0 18px 50px rgba(30, 41, 59, 0.08);
-  --jadci-shadow-hover: 0 26px 65px rgba(79, 32, 150, 0.16);
-  --jadci-radius: 22px;
+  --jadci-purple: #6b21a8;
+  --jadci-purple-light: #8b5cf6;
+  --jadci-blue: #0066ff;
+  --jadci-yellow: #ffcc00;
+  --jadci-green: #00a651;
+  --jadci-orange: #f97316;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+
+  --white: #ffffff;
+  --black: #020617;
+
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  --shadow-soft:
+    0 10px 30px rgba(15, 23, 42, 0.07);
+
+  --shadow-card:
+    0 18px 50px rgba(15, 23, 42, 0.10);
+
+  --shadow-purple:
+    0 20px 60px rgba(107, 33, 168, 0.20);
 }
+
+
+/* =========================================================
+   3. RESET GLOBAL
+   ========================================================= */
 
 *,
 *::before,
@@ -29,755 +58,1162 @@
 
 html {
   scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  min-width: 320px;
-  background: #f8f7ff;
-  color: var(--jadci-ink);
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
+  padding: 0;
 
-body::selection {
-  background: rgba(100, 40, 199, 0.2);
+  font-family: "Inter", sans-serif;
+
+  background: #ffffff;
+  color: var(--text-main);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 button,
 input,
-textarea,
-select {
+select,
+textarea {
   font: inherit;
 }
 
 button {
-  -webkit-tap-highlight-color: transparent;
+  border: 0;
+  cursor: pointer;
 }
 
-button:not(:disabled) {
-  transition:
-    transform 0.22s ease,
-    box-shadow 0.22s ease,
-    background 0.22s ease,
-    border-color 0.22s ease,
-    color 0.22s ease,
-    filter 0.22s ease;
+img {
+  max-width: 100%;
+  display: block;
 }
 
-button:not(:disabled):hover {
-  transform: translateY(-2px);
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-button:not(:disabled):active {
-  transform: translateY(0) scale(0.985);
+
+/* =========================================================
+   4. TYPOGRAPHIE
+   ========================================================= */
+
+.font-pop,
+.font-pop *,
+.title-font,
+.title-font * {
+  font-family: "Poppins", sans-serif;
 }
 
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 3px solid rgba(36, 86, 216, 0.25);
-  outline-offset: 2px;
+.font-pop {
+  font-family: "Poppins", sans-serif;
 }
 
-/* ---------- Barre de navigation ---------- */
+.title-font {
+  font-family: "Poppins", sans-serif;
+  font-weight: 800;
+}
+
+.grad-t {
+  background: linear-gradient(
+    120deg,
+    #6b21a8 0%,
+    #0066ff 50%,
+    #00a651 100%
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+
+  background-size: 200% auto;
+
+  animation: gradientText 5s ease-in-out infinite;
+}
+
+.grad-v {
+  background: linear-gradient(
+    120deg,
+    #0066ff,
+    #6b21a8,
+    #8b5cf6
+  );
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+
+  background-size: 200% auto;
+
+  animation: gradientText 4s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   5. HEADER
+   ========================================================= */
 
 header {
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 5px 25px rgba(30, 41, 59, 0.035);
-}
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 
-header nav button:hover {
-  background: rgba(36, 86, 216, 0.09) !important;
-  color: var(--jadci-blue) !important;
-}
-
-header nav button[style*="rgb(36, 86, 216)"]:hover,
-header nav button[style*="#2456d8"]:hover {
-  background: var(--jadci-blue-dark) !important;
-  color: #fff !important;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease,
+    backdrop-filter 0.3s ease;
 }
 
 header img {
-  transition: transform 0.35s ease, filter 0.35s ease;
+  object-fit: contain;
 }
 
-header img:hover {
-  transform: rotate(-3deg) scale(1.04);
-  filter: drop-shadow(0 8px 14px rgba(36, 86, 216, 0.18));
-}
-
-/* ---------- Bandeau d'annonce ---------- */
-
-main + footer {
-  position: relative;
-}
-
-main {
-  position: relative;
-}
-
-main::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 auto;
-  height: 520px;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(100, 40, 199, 0.08), transparent 27%),
-    radial-gradient(circle at 88% 14%, rgba(36, 86, 216, 0.08), transparent 24%);
-  z-index: 0;
-}
-
-main > * {
-  position: relative;
-  z-index: 1;
-}
-
-/* ---------- Accueil / Hero ---------- */
-
-.gradient-text {
-  background: linear-gradient(100deg, #5420a8 0%, #6428c7 48%, #2456d8 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.hero-orbit {
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 50%;
-  pointer-events: none;
-  animation: orbitSpin 18s linear infinite;
-}
-
-.hero-orbit-1 {
-  width: 430px;
-  height: 430px;
-  top: 8%;
-  left: 8%;
-  transform: rotate(20deg);
-}
-
-.hero-orbit-2 {
-  width: 620px;
-  height: 620px;
-  top: -12%;
-  left: -4%;
-  border-style: dashed;
-  opacity: 0.6;
-  animation-duration: 28s;
-  animation-direction: reverse;
-}
-
-.hero-spark {
-  position: absolute;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--jadci-yellow);
-  box-shadow: 0 0 20px rgba(253, 224, 71, 0.8);
-  pointer-events: none;
-  animation: sparkFloat 3.5s ease-in-out infinite;
-}
-
-.spark-1 {
-  top: 20%;
-  right: 15%;
-}
-
-.spark-2 {
-  bottom: 22%;
-  left: 15%;
-  width: 6px;
-  height: 6px;
-  animation-delay: -1.2s;
-}
-
-.spark-3 {
-  top: 38%;
-  right: 8%;
-  width: 5px;
-  height: 5px;
-  animation-delay: -2.1s;
-}
-
-.reveal {
-  animation: revealUp 0.8s cubic-bezier(0.2, 0.75, 0.25, 1) both;
-}
-
-.reveal-delay-1 {
-  animation-delay: 0.08s;
-}
-
-.reveal-delay-2 {
-  animation-delay: 0.18s;
-}
-
-.reveal-delay-3 {
-  animation-delay: 0.28s;
-}
-
-.reveal-card {
-  animation: revealCard 0.7s cubic-bezier(0.2, 0.75, 0.25, 1) both;
-}
-
-.interactive-card {
+header button:first-child img {
   transition:
-    transform 0.28s ease,
-    box-shadow 0.28s ease,
-    border-color 0.28s ease,
-    background 0.28s ease;
+    transform 0.45s cubic-bezier(.2,.8,.2,1),
+    filter 0.45s ease;
 }
 
-.interactive-card:hover {
-  transform: translateY(-6px);
-  box-shadow: var(--jadci-shadow-hover) !important;
-  border-color: rgba(100, 40, 199, 0.22) !important;
+header button:first-child:hover img {
+  transform: rotate(-4deg) scale(1.08);
+  filter: drop-shadow(0 8px 18px rgba(107, 33, 168, 0.25));
 }
 
-.home-media-strip {
-  position: relative;
-  overflow: hidden;
+
+/* =========================================================
+   6. LOGO JADCI
+   ========================================================= */
+
+.logo-pulse {
+  animation:
+    logoPulse 3.5s ease-in-out infinite,
+    logoFloat 5s ease-in-out infinite;
+
+  transform-origin: center;
+  will-change: transform, filter;
 }
 
-.home-media-strip::before {
+.logo-pulse:hover {
+  animation-play-state: paused;
+
+  transform: scale(1.08) rotate(3deg);
+
+  filter:
+    drop-shadow(0 0 10px rgba(107, 33, 168, 0.30))
+    drop-shadow(0 0 30px rgba(0, 102, 255, 0.20));
+}
+
+.logo-spin {
+  animation: logoSpin 8s linear infinite;
+}
+
+.logo-spin img {
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   7. ORBITE AUTOUR DU LOGO
+   ========================================================= */
+
+.orbit-ring {
+  animation:
+    orbitRotate 15s linear infinite;
+
+  transform-origin: center;
+}
+
+.orbit-ring::before,
+.orbit-ring::after {
   content: "";
+
   position: absolute;
-  width: 280px;
-  height: 280px;
-  right: -80px;
-  top: -120px;
-  border: 1px solid rgba(255, 255, 255, 0.17);
+
+  width: 10px;
+  height: 10px;
+
   border-radius: 50%;
+
+  background: var(--jadci-purple);
+
+  box-shadow:
+    0 0 12px rgba(107, 33, 168, 0.55),
+    0 0 25px rgba(107, 33, 168, 0.25);
 }
 
-.home-media-strip::after {
-  content: "";
-  position: absolute;
-  width: 170px;
-  height: 170px;
-  right: 90px;
-  bottom: -110px;
-  border: 1px dashed rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
+.orbit-ring::before {
+  top: -6px;
+  left: 50%;
+
+  transform: translateX(-50%);
 }
 
-/* ---------- Badges / états ---------- */
+.orbit-ring::after {
+  bottom: -6px;
+  left: 50%;
 
-.live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  width: fit-content;
-  padding: 7px 11px;
-  border-radius: 999px;
-  background: rgba(100, 40, 199, 0.1);
-  border: 1px solid rgba(100, 40, 199, 0.18);
-  color: var(--jadci-purple-dark);
-  font-size: 11px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  text-transform: uppercase;
+  transform: translateX(-50%);
+
+  background: var(--jadci-blue);
 }
 
-.home-media-strip .live-badge,
-.mediaHero .live-badge {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.22);
-  color: #fff;
-}
 
-.live-now {
-  background: rgba(239, 68, 68, 0.16) !important;
-  border-color: rgba(254, 202, 202, 0.4) !important;
-  color: #fff !important;
-  animation: livePulse 1.5s ease-in-out infinite;
-}
+/* =========================================================
+   8. HERO — IMAGES
+   ========================================================= */
 
-.admin-success {
-  border: 1px solid rgba(34, 197, 94, 0.25);
-  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
-  color: #166534;
-  border-radius: 14px;
-  padding: 14px 17px;
-  font-weight: 750;
-  box-shadow: 0 10px 28px rgba(22, 101, 52, 0.07);
-}
+/*
+   Le JSX utilise :
+   section.relative.min-h-[92vh]
+   puis une div absolute.inset-0
+   contenant les images.
 
-/* ---------- Médias / Direct / Prédications ---------- */
+   On force ici les images à rester visibles.
+*/
 
-.media-glow {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(5px);
-  pointer-events: none;
-  animation: glowDrift 7s ease-in-out infinite;
-}
-
-.media-glow-1 {
-  width: 260px;
-  height: 260px;
-  right: -80px;
-  top: -100px;
-  background: rgba(253, 224, 71, 0.14);
-}
-
-.media-glow-2 {
-  width: 220px;
-  height: 220px;
-  left: -100px;
-  bottom: -120px;
-  background: rgba(99, 102, 241, 0.2);
-  animation-delay: -2s;
-}
-
-.media-play {
-  display: grid;
-  place-items: center;
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  background: #fff;
-  color: var(--jadci-purple);
-  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.22);
-  font-size: 21px;
-  line-height: 1;
-  animation: playPulse 2.4s ease-in-out infinite;
-}
-
-.media-card {
-  overflow: hidden;
-}
-
-.media-cover {
+section.relative.min-h-\[92vh\] {
   position: relative;
   isolation: isolate;
 }
 
-.media-cover::after {
-  content: "";
-  position: absolute;
-  width: 130px;
-  height: 130px;
-  right: -35px;
-  bottom: -60px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50%;
-  z-index: -1;
+section.relative.min-h-\[92vh\] > div.absolute.inset-0 {
+  z-index: 0;
 }
 
-.media-cover-ring img {
+section.relative.min-h-\[92vh\] > div.absolute.inset-0 > div {
+  transition:
+    opacity 1.2s ease-in-out,
+    transform 1.8s cubic-bezier(.2,.7,.2,1);
+}
+
+section.relative.min-h-\[92vh\] > div.absolute.inset-0 img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  display: block;
+
+  object-fit: cover;
+
+  object-position: center;
+
+  transform: scale(1.03);
+
+  animation: heroZoom 8s ease-in-out infinite alternate;
+
+  will-change: transform;
 }
 
-/* ---------- Formulaires ---------- */
+/*
+   Overlay plus léger afin que tes vraies photos
+   restent clairement visibles.
+*/
+
+section.relative.min-h-\[92vh\]
+> div.absolute.inset-0
+> div
+> div.absolute.inset-0 {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255,255,255,0.88) 0%,
+      rgba(255,255,255,0.67) 43%,
+      rgba(255,255,255,0.20) 100%
+    ) !important;
+}
+
+
+/* =========================================================
+   9. HERO — TEXTE
+   ========================================================= */
+
+.slide-l {
+  animation:
+    slideLeft 1s cubic-bezier(.16,1,.3,1) both;
+}
+
+.slide-l h1 {
+  animation:
+    heroTitle 1.2s cubic-bezier(.16,1,.3,1) both;
+
+  animation-delay: 0.15s;
+}
+
+.slide-l p {
+  animation:
+    fadeUpText 1s ease both;
+
+  animation-delay: 0.45s;
+}
+
+.slide-l .btn-p {
+  animation:
+    fadeUpText 1s ease both;
+
+  animation-delay: 0.65s;
+}
+
+.slide-r {
+  animation:
+    slideRight 1.2s cubic-bezier(.16,1,.3,1) both;
+
+  animation-delay: 0.25s;
+}
+
+
+/* =========================================================
+   10. PARTICULES
+   ========================================================= */
+
+.particle {
+  position: absolute;
+
+  border-radius: 50%;
+
+  pointer-events: none;
+
+  animation:
+    particleFloat 7s ease-in-out infinite;
+
+  filter: blur(0.2px);
+
+  box-shadow:
+    0 0 12px currentColor;
+
+  will-change: transform, opacity;
+}
+
+.particle:nth-child(2n) {
+  animation-duration: 9s;
+}
+
+.particle:nth-child(3n) {
+  animation-duration: 11s;
+}
+
+.particle:nth-child(4n) {
+  animation-direction: reverse;
+}
+
+
+/* =========================================================
+   11. CARTES / GLASS
+   ========================================================= */
+
+.glass {
+  background:
+    rgba(255, 255, 255, 0.78);
+
+  border:
+    1px solid rgba(255, 255, 255, 0.75);
+
+  box-shadow:
+    0 20px 60px rgba(15, 23, 42, 0.08);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+.glass:hover {
+  transform: translateY(-8px);
+
+  box-shadow:
+    0 30px 70px rgba(107, 33, 168, 0.13);
+
+  border-color:
+    rgba(107, 33, 168, 0.15);
+}
+
+.card-h {
+  transition:
+    transform 0.35s cubic-bezier(.2,.8,.2,1),
+    box-shadow 0.35s ease,
+    border-color 0.35s ease;
+}
+
+.card-h:hover {
+  transform: translateY(-8px);
+
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.12);
+}
+
+
+/* =========================================================
+   12. PRODUITS / BOUTIQUE
+   ========================================================= */
+
+.group img {
+  transition:
+    transform 0.55s cubic-bezier(.2,.8,.2,1),
+    filter 0.45s ease;
+}
+
+.group:hover img {
+  transform: scale(1.08);
+
+  filter:
+    drop-shadow(0 15px 20px rgba(15, 23, 42, 0.15));
+}
+
+/*
+   Les images produits doivent rester entières.
+*/
+
+.group .object-contain {
+  width: auto;
+  max-width: 92%;
+  max-height: 92%;
+
+  object-fit: contain;
+}
+
+
+/* =========================================================
+   13. ANIMATION IMAGE PRODUIT
+   ========================================================= */
+
+.group:hover .object-contain {
+  animation:
+    productFloat 1.8s ease-in-out infinite alternate;
+}
+
+
+/* =========================================================
+   14. BOUTON PRINCIPAL JADCI
+   ========================================================= */
+
+.btn-p {
+  position: relative;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      135deg,
+      #6b21a8 0%,
+      #0066ff 55%,
+      #6b21a8 100%
+    );
+
+  background-size: 200% 200%;
+
+  box-shadow:
+    0 12px 28px rgba(107, 33, 168, 0.24);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    background-position 0.5s ease;
+}
+
+.btn-p::before {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+  left: -120%;
+
+  width: 80%;
+  height: 100%;
+
+  background:
+    linear-gradient(
+      90deg,
+      transparent,
+      rgba(255,255,255,0.30),
+      transparent
+    );
+
+  transform: skewX(-20deg);
+
+  transition: left 0.7s ease;
+}
+
+.btn-p:hover {
+  transform: translateY(-3px);
+
+  background-position: 100% 50%;
+
+  box-shadow:
+    0 18px 38px rgba(107, 33, 168, 0.32);
+}
+
+.btn-p:hover::before {
+  left: 140%;
+}
+
+.btn-p:active {
+  transform: translateY(0) scale(0.98);
+}
+
+
+/* =========================================================
+   15. BACKGROUND À POINTS
+   ========================================================= */
+
+.bg-dots {
+  background-color: #ffffff;
+
+  background-image:
+    radial-gradient(
+      rgba(107, 33, 168, 0.11) 1px,
+      transparent 1px
+    );
+
+  background-size: 24px 24px;
+}
+
+
+/* =========================================================
+   16. SECTIONS
+   ========================================================= */
+
+section {
+  position: relative;
+}
+
+section h1,
+section h2,
+section h3 {
+  letter-spacing: -0.025em;
+}
+
+
+/* =========================================================
+   17. ANIMATION D'APPARITION
+   ========================================================= */
+
+.fade-up {
+  animation:
+    fadeUp 0.75s cubic-bezier(.16,1,.3,1) both;
+}
+
+.fade-up:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.fade-up:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+
+/* =========================================================
+   18. STATISTIQUES
+   ========================================================= */
+
+.float {
+  animation:
+    float 4s ease-in-out infinite;
+
+  will-change: transform;
+}
+
+.float:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.float:nth-child(3) {
+  animation-delay: 1s;
+}
+
+.float:nth-child(4) {
+  animation-delay: 1.5s;
+}
+
+
+/* =========================================================
+   19. TOAST
+   ========================================================= */
+
+.toast-jadci {
+  position: fixed;
+
+  top: 90px;
+  left: 50%;
+
+  z-index: 9999;
+
+  transform: translateX(-50%);
+
+  max-width: calc(100vw - 32px);
+
+  padding: 14px 22px;
+
+  border-radius: 16px;
+
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  background:
+    linear-gradient(
+      135deg,
+      #6b21a8,
+      #0066ff
+    );
+
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.22);
+
+  animation:
+    toastIn 0.45s cubic-bezier(.16,1,.3,1) both;
+}
+
+
+/* =========================================================
+   20. GALERIE
+   ========================================================= */
+
+.gallery-image {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+
+  transition:
+    transform 0.6s cubic-bezier(.2,.8,.2,1),
+    filter 0.4s ease;
+}
+
+.gallery-image:hover {
+  transform: scale(1.08);
+
+  filter:
+    brightness(1.05)
+    saturate(1.08);
+}
+
+
+/* =========================================================
+   21. IMAGES DES ACTUALITÉS
+   ========================================================= */
+
+article img {
+  transition:
+    transform 0.6s cubic-bezier(.2,.8,.2,1);
+}
+
+article:hover img {
+  transform: scale(1.06);
+}
+
+
+/* =========================================================
+   22. INPUTS / FORMULAIRES
+   ========================================================= */
 
 input,
-textarea,
-select {
-  color: var(--jadci-ink);
-}
+select,
+textarea {
+  outline: none;
 
-input::placeholder,
-textarea::placeholder {
-  color: #94a3b8;
-  opacity: 1;
-}
-
-input:hover,
-textarea:hover,
-select:hover {
-  border-color: #b9a5ea !important;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.2s ease;
 }
 
 input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--jadci-blue) !important;
-  box-shadow: 0 0 0 4px rgba(36, 86, 216, 0.08);
+select:focus,
+textarea:focus {
+  border-color: var(--jadci-purple) !important;
+
+  box-shadow:
+    0 0 0 4px rgba(107, 33, 168, 0.09);
+
+  transform: translateY(-1px);
 }
 
-textarea {
-  resize: vertical;
-  min-height: 110px;
-}
 
-select {
-  appearance: auto;
-}
+/* =========================================================
+   23. SCROLLBAR
+   ========================================================= */
 
-/* ---------- Tableaux administration ---------- */
-
-table {
-  border-spacing: 0;
-}
-
-table thead tr {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-table th {
-  white-space: nowrap;
-}
-
-table tbody tr {
-  transition: background 0.2s ease;
-}
-
-table tbody tr:hover {
-  background: #faf9ff;
-}
-
-table td button {
-  white-space: nowrap;
-}
-
-/* ---------- Boutons ---------- */
-
-button {
-  letter-spacing: -0.01em;
-}
-
-button:hover {
-  filter: brightness(1.02);
-}
-
-button[style*="#2456d8"]:hover,
-button[style*="rgb(36, 86, 216)"]:hover {
-  box-shadow: 0 14px 30px rgba(36, 86, 216, 0.28) !important;
-}
-
-button[style*="#ffffff"]:hover {
-  border-color: #c8b6f4 !important;
-}
-
-/* ---------- Images ---------- */
-
-img {
-  max-width: 100%;
-}
-
-img:not([src=""]) {
-  display: block;
-}
-
-/* ---------- Pied de page ---------- */
-
-footer {
-  position: relative;
-  overflow: hidden;
-}
-
-footer::before,
-footer::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-}
-
-footer::before {
-  width: 420px;
-  height: 420px;
-  left: -170px;
-  top: -260px;
-}
-
-footer::after {
-  width: 280px;
-  height: 280px;
-  right: -100px;
-  bottom: -180px;
-}
-
-footer .interactive-card:hover {
-  transform: translateY(-4px) rotate(-2deg);
-}
-
-/* ---------- Scrollbar ---------- */
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 40, 199, 0.45) transparent;
-}
-
-*::-webkit-scrollbar {
+::-webkit-scrollbar {
   width: 9px;
-  height: 9px;
 }
 
-*::-webkit-scrollbar-track {
-  background: transparent;
+::-webkit-scrollbar-track {
+  background: #f8fafc;
 }
 
-*::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--jadci-purple), var(--jadci-blue));
+::-webkit-scrollbar-thumb {
+  background:
+    linear-gradient(
+      180deg,
+      #6b21a8,
+      #0066ff
+    );
+
   border-radius: 999px;
 }
 
-/* ---------- Animations ---------- */
-
-@keyframes revealUp {
-  from {
-    opacity: 0;
-    transform: translateY(28px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+::-webkit-scrollbar-thumb:hover {
+  background:
+    linear-gradient(
+      180deg,
+      #581c87,
+      #0050c8
+    );
 }
 
-@keyframes revealCard {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+
+/* =========================================================
+   24. SÉLECTION TEXTE
+   ========================================================= */
+
+::selection {
+  background: rgba(107, 33, 168, 0.18);
+  color: #3b0764;
 }
 
-@keyframes heroFloat {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
+
+/* =========================================================
+   25. ANIMATIONS
+   ========================================================= */
+
+@keyframes logoPulse {
+  0% {
+    transform: scale(1);
+    filter:
+      drop-shadow(0 0 0 rgba(107, 33, 168, 0));
   }
+
   50% {
-    transform: translateY(-10px) rotate(0.35deg);
+    transform: scale(1.035);
+    filter:
+      drop-shadow(
+        0 10px 25px rgba(107, 33, 168, 0.20)
+      );
+  }
+
+  100% {
+    transform: scale(1);
+    filter:
+      drop-shadow(0 0 0 rgba(107, 33, 168, 0));
   }
 }
+
 
 @keyframes logoFloat {
   0%,
   100% {
-    transform: translateY(0) scale(1);
+    margin-top: 0;
   }
+
   50% {
-    transform: translateY(-9px) scale(1.015);
+    margin-top: -5px;
   }
 }
 
-@keyframes orbitSpin {
+
+@keyframes logoSpin {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
 }
 
-@keyframes sparkFloat {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: translate3d(0, 0, 0) scale(0.8);
+
+@keyframes orbitRotate {
+  from {
+    transform: rotate(0deg);
   }
-  50% {
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+@keyframes heroZoom {
+  0% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1.09);
+  }
+}
+
+
+@keyframes slideLeft {
+  from {
+    opacity: 0;
+
+    transform:
+      translateX(-60px);
+  }
+
+  to {
     opacity: 1;
-    transform: translate3d(0, -16px, 0) scale(1.2);
+
+    transform:
+      translateX(0);
   }
 }
 
-@keyframes livePulse {
+
+@keyframes slideRight {
+  from {
+    opacity: 0;
+
+    transform:
+      translateX(60px)
+      scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateX(0)
+      scale(1);
+  }
+}
+
+
+@keyframes heroTitle {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(30px)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+
+@keyframes fadeUpText {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(30px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+@keyframes particleFloat {
+  0% {
+    opacity: 0.15;
+
+    transform:
+      translate3d(0, 0, 0)
+      scale(0.8);
+  }
+
+  25% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 0.8;
+
+    transform:
+      translate3d(20px, -35px, 0)
+      scale(1.2);
+  }
+
+  75% {
+    opacity: 0.35;
+  }
+
+  100% {
+    opacity: 0.15;
+
+    transform:
+      translate3d(-15px, -70px, 0)
+      scale(0.8);
+  }
+}
+
+
+@keyframes productFloat {
+  from {
+    transform:
+      scale(1.08)
+      translateY(0);
+  }
+
+  to {
+    transform:
+      scale(1.11)
+      translateY(-5px);
+  }
+}
+
+
+@keyframes float {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.22);
+    transform:
+      translateY(0);
   }
+
   50% {
-    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    transform:
+      translateY(-10px);
   }
 }
 
-@keyframes playPulse {
-  0%,
+
+@keyframes gradientText {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
   100% {
-    transform: scale(1);
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.22);
-  }
-  50% {
-    transform: scale(1.06);
-    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+    background-position: 0% 50%;
   }
 }
 
-@keyframes glowDrift {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -20px)
+      scale(0.96);
   }
-  50% {
-    transform: translate3d(12px, -12px, 0) scale(1.06);
+
+  to {
+    opacity: 1;
+
+    transform:
+      translate(-50%, 0)
+      scale(1);
   }
 }
 
-/* ---------- Tablette ---------- */
 
-@media (max-width: 1050px) {
-  header > div {
-    flex-wrap: wrap !important;
+/* =========================================================
+   26. RESPONSIVE — TABLETTE
+   ========================================================= */
+
+@media (max-width: 1024px) {
+
+  section.relative.min-h-\[92vh\] > div.absolute.inset-0 img {
+    object-position: 58% center;
   }
 
-  header nav {
+  .title-font {
+    letter-spacing: -0.035em;
+  }
+
+}
+
+
+/* =========================================================
+   27. RESPONSIVE — MOBILE
+   ========================================================= */
+
+@media (max-width: 767px) {
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /*
+     Hero mobile
+  */
+
+  section.relative.min-h-\[92vh\] {
+    min-height: 850px;
+  }
+
+  section.relative.min-h-\[92vh\]
+  > div.absolute.inset-0
+  img {
+    object-position: 65% center;
+
+    transform: scale(1.05);
+
+    opacity: 0.32;
+  }
+
+  section.relative.min-h-\[92vh\]
+  > div.absolute.inset-0
+  > div
+  > div.absolute.inset-0 {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255,255,255,0.78) 0%,
+        rgba(255,255,255,0.90) 60%,
+        rgba(255,255,255,0.98) 100%
+      ) !important;
+  }
+
+  /*
+     Texte hero
+  */
+
+  .slide-l {
+    padding-top: 30px;
+  }
+
+  .slide-l h1 {
+    font-size: clamp(
+      48px,
+      15vw,
+      72px
+    );
+  }
+
+  .slide-l p {
+    font-size: 16px;
+  }
+
+  /*
+     Boutons
+  */
+
+  .slide-l .flex {
+    flex-direction: column;
+
+    align-items: stretch;
+  }
+
+  .slide-l button {
     width: 100%;
-    justify-content: flex-start !important;
-    overflow-x: auto;
-    flex-wrap: nowrap !important;
-    padding-bottom: 2px;
+
+    justify-content: center;
   }
 
-  header nav button {
-    flex: 0 0 auto;
+  /*
+     Logo
+  */
+
+  .logo-pulse {
+    animation-duration: 4s;
   }
+
+  /*
+     Cartes
+  */
+
+  .glass:hover,
+  .card-h:hover {
+    transform: translateY(-4px);
+  }
+
 }
 
-/* ---------- Mobile ---------- */
 
-@media (max-width: 820px) {
-  header > div {
-    padding: 10px 18px !important;
+/* =========================================================
+   28. PETITS ÉCRANS
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+  .toast-jadci {
+    top: 76px;
+
+    width:
+      calc(100vw - 24px);
+
+    text-align: center;
   }
 
-  header img {
-    width: 52px !important;
-    height: 52px !important;
+  section.relative.min-h-\[92vh\] {
+    min-height: 820px;
   }
 
-  header h1 {
-    font-size: 22px !important;
+  .title-font {
+    letter-spacing: -0.04em;
   }
 
-  header p {
-    font-size: 11px !important;
-  }
-
-  header nav {
-    margin-top: 3px;
-  }
-
-  header nav button {
-    padding: 10px 12px !important;
-    font-size: 12px !important;
-  }
-
-  main {
-    padding: 34px 18px 60px !important;
-  }
-
-  main > section {
-    margin-bottom: 50px !important;
-  }
-
-  /* Le hero inline est volontairement rendu en une colonne. */
-  main > section:first-child {
-    grid-template-columns: 1fr !important;
-    gap: 32px !important;
-    min-height: auto !important;
-  }
-
-  main > section:first-child > div:nth-child(2) {
-    min-height: 390px !important;
-    border-radius: 26px !important;
-  }
-
-  .home-media-strip {
-    padding: 26px !important;
-  }
-
-  .media-play {
-    width: 54px;
-    height: 54px;
-  }
-
-  table {
-    min-width: 680px !important;
-  }
 }
 
-@media (max-width: 560px) {
-  header > div {
-    padding: 9px 14px !important;
-  }
 
-  header nav {
-    gap: 3px !important;
-  }
-
-  header nav button {
-    padding: 9px 10px !important;
-    font-size: 11px !important;
-  }
-
-  main {
-    padding-left: 14px !important;
-    padding-right: 14px !important;
-  }
-
-  main > section:first-child h1 {
-    font-size: clamp(39px, 12vw, 55px) !important;
-    letter-spacing: -2px !important;
-  }
-
-  main > section:first-child p {
-    font-size: 16px !important;
-  }
-
-  main > section:first-child > div:nth-child(2) {
-    min-height: 340px !important;
-    padding: 28px 20px !important;
-  }
-
-  .home-media-strip {
-    padding: 22px !important;
-  }
-
-  .media-cover {
-    min-height: 145px !important;
-    padding: 17px !important;
-  }
-
-  .media-cover-ring {
-    width: 70px !important;
-    height: 70px !important;
-  }
-
-  .hero-orbit-1 {
-    width: 280px;
-    height: 280px;
-  }
-
-  .hero-orbit-2 {
-    width: 400px;
-    height: 400px;
-  }
-}
-
-/* ---------- Réduction des animations pour utilisateurs sensibles ---------- */
+/* =========================================================
+   29. ACCESSIBILITÉ
+   ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
 
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+
+    scroll-behavior: auto !important;
+
     transition-duration: 0.01ms !important;
   }
+
 }
+
+
+/* =========================================================
+   30. CORRECTION DES IMAGES TRANSPARENTES
+   ========================================================= */
+
+img[src*="jadci-logo"] {
+  object-fit: contain !important;
+}
+
+img[src*="tshirt-"],
+img[src*="polo-"] {
+  object-fit: contain !important;
+
+  image-rendering: auto;
+
+  backface-visibility: hidden;
+}
+
+
+/* =========================================================
+   FIN APP.CSS
+   ========================================================= */

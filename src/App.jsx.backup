@@ -1,0 +1,5813 @@
+import { useEffect, useMemo, useState } from "react";
+import "./App.css";
+
+const STORAGE_KEY = "jadci_platform_v5";
+
+/* =========================================================
+   DONNÉES DE BASE
+========================================================= */
+
+const initialProducts = [
+  {
+    id: "prod-001",
+    name: "T-shirt JADCI",
+    price: 5000,
+    stock: 20,
+    category: "Vêtement",
+    description: "T-shirt officiel JADCI.",
+    image: "",
+    sizes: ["S", "M", "L", "XL", "XXL", "3XL", "4XL"],
+  },
+  {
+    id: "prod-002",
+    name: "Casquette JADCI",
+    price: 3500,
+    stock: 15,
+    category: "Accessoire",
+    description: "Casquette officielle JADCI.",
+    image: "",
+    sizes: [],
+  },
+  {
+    id: "prod-003",
+    name: "Agenda JADCI",
+    price: 2500,
+    stock: 30,
+    category: "Papeterie",
+    description: "Agenda pratique pour l'organisation.",
+    image: "",
+    sizes: [],
+  },
+];
+
+const initialNews = [
+  {
+    id: "news-001",
+    title: "Bienvenue sur la plateforme JADCI",
+    text: "Retrouvez les espaces Jeunes, Responsables, la boutique et toutes les informations de la plateforme.",
+    type: "actualite",
+    image: "/assets/hero-jeunesse-1.jpg",
+    video: "",
+    document: "",
+    date: new Date().toLocaleDateString("fr-FR"),
+    published: true,
+  },
+  {
+    id: "news-002",
+    title: "Les espaces personnels évoluent",
+    text: "Chaque membre dispose désormais d'un espace personnel pour gérer ses informations et ses activités.",
+    type: "actualite",
+    image: "/assets/hero-jeunesse-2.jpg",
+    video: "",
+    document: "",
+    date: new Date().toLocaleDateString("fr-FR"),
+    published: true,
+  },
+  {
+    id: "news-003",
+    title: "La boutique JADCI",
+    text: "Découvrez les produits disponibles dans la boutique JADCI.",
+    type: "actualite",
+    image: "/assets/hero-jeunesse-3.jpg",
+    video: "",
+    document: "",
+    date: new Date().toLocaleDateString("fr-FR"),
+    published: true,
+  },
+];
+
+const defaultData = {
+  users: [],
+  requests: [],
+  projects: [],
+  churches: [],
+  applications: [],
+  recommendations: [],
+  reports: [],
+  convocations: [],
+  orders: [],
+  payments: [],
+  products: initialProducts,
+  news: initialNews,
+  announcements: [],
+  activityLog: [],
+  counters: {
+    youth: 1,
+    responsible: 1,
+    order: 1,
+    request: 1,
+    project: 1,
+    church: 1,
+    receipt: 1,
+    application: 1,
+    recommendation: 1,
+    report: 1,
+    convocation: 1,
+    announcement: 1,
+  },
+};
+
+/* =========================================================
+   OUTILS
+========================================================= */
+
+function safeRandomId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function money(value) {
+  return (
+    new Intl.NumberFormat("fr-FR", {
+      maximumFractionDigits: 0,
+    }).format(Number(value || 0)) + " FCFA"
+  );
+}
+
+function formatDate(value) {
+  if (!value) return "";
+
+  try {
+    return new Date(value).toLocaleString("fr-FR");
+  } catch {
+    return value;
+  }
+}
+
+function makeReference(prefix, number) {
+  return `${prefix}-${String(number).padStart(6, "0")}`;
+}
+
+function normalize(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function generateReceiptCode(number) {
+  return `JAD-${new Date().getFullYear()}-${String(number).padStart(
+    6,
+    "0"
+  )}`;
+}
+
+/*
+  Format demandé :
+
+  [Genre][Initial][Mois][Nationalité][K+année][NNNN]
+
+  Exemple :
+  FA11K260001
+
+  F = Femme
+  A = première lettre du nom
+  1 = janvier
+  1 = ivoirienne
+  K26 = année 2026
+  0001 = numéro d'ordre
+*/
+
+function generateMatricule({
+  gender,
+  lastName,
+  nationality,
+  birthOrRegistrationMonth,
+  number,
+}) {
+  const genderCode =
+    normalize(gender) === "femme" ||
+    normalize(gender) === "f"
+      ? "F"
+      : "H";
+
+  const initial =
+    String(lastName || "X")
+      .trim()
+      .charAt(0)
+      .toUpperCase() || "X";
+
+  const month = String(
+    Number(birthOrRegistrationMonth) || new Date().getMonth() + 1
+  ).padStart(2, "0");
+
+  const nationalityCode =
+    normalize(nationality) === "ivoirienne" ||
+    normalize(nationality) === "ivoirien" ||
+    normalize(nationality) === "ci"
+      ? "1"
+      : "2";
+
+  const year = String(new Date().getFullYear()).slice(-2);
+
+  const order = String(number).padStart(4, "0");
+
+  return `${genderCode}${initial}${month}${nationalityCode}K${year}${order}`;
+}
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (!saved) {
+      return defaultData;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    return {
+      ...defaultData,
+      ...parsed,
+      users: parsed.users || [],
+      requests: parsed.requests || [],
+      projects: parsed.projects || [],
+      churches: parsed.churches || [],
+      applications: parsed.applications || [],
+      recommendations: parsed.recommendations || [],
+      reports: parsed.reports || [],
+      convocations: parsed.convocations || [],
+      orders: parsed.orders || [],
+      payments: parsed.payments || [],
+      products:
+        parsed.products && parsed.products.length
+          ? parsed.products
+          : initialProducts,
+      news:
+        parsed.news && parsed.news.length
+          ? parsed.news
+          : initialNews,
+      announcements: parsed.announcements || [],
+      activityLog: parsed.activityLog || [],
+      counters: {
+        ...defaultData.counters,
+        ...(parsed.counters || {}),
+      },
+    };
+  } catch {
+    return defaultData;
+  }
+}
+
+/* =========================================================
+   ADMINISTRATION
+========================================================= */
+
+const ADMIN_ACCOUNTS = {
+  general: {
+    matricule: "AGENT-X-26",
+    password: "JADCI-X-2026",
+    label: "Administrateur général",
+  },
+
+  marketing: {
+    matricule: "ADM-MKT-26",
+    password: "Treso-Store-26",
+    label: "Administrateur Marketing",
+  },
+
+  communication: {
+    matricule: "CO-ADM-26",
+    password: "JADCI-Com26",
+    label: "Administrateur Communication",
+  },
+};
+
+/* =========================================================
+   APPLICATION PRINCIPALE
+========================================================= */
+
+function App() {
+  const [data, setData] = useState(loadData);
+
+  const [page, setPage] = useState("home");
+
+  const [authMode, setAuthMode] = useState(null);
+  const [authRole, setAuthRole] = useState("youth");
+
+  const [currentUser, setCurrentUser] = useState(null);
+
+  const [adminSession, setAdminSession] = useState(null);
+
+  const [cart, setCart] = useState([]);
+
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
+  useEffect(() => {
+    if (!message) return undefined;
+
+    const timer = setTimeout(() => {
+      setMessage("");
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  const userOrders = useMemo(() => {
+    if (!currentUser) return [];
+
+    return data.orders.filter(
+      (order) => order.userId === currentUser.id
+    );
+  }, [data.orders, currentUser]);
+
+  const cartTotal = useMemo(() => {
+    return cart.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+  }, [cart]);
+
+  function notify(text) {
+    setMessage(text);
+  }
+
+  function updateData(updater) {
+    setData((previous) => {
+      if (typeof updater === "function") {
+        return updater(previous);
+      }
+
+      return updater;
+    });
+  }
+
+  function addActivity(action, details = "") {
+    const entry = {
+      id: safeRandomId(),
+      action,
+      details,
+      admin: adminSession?.matricule || currentUser?.matricule || "SYSTEM",
+      date: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+      activityLog: [entry, ...previous.activityLog].slice(0, 500),
+    }));
+  }
+
+  /* =======================================================
+     AUTHENTIFICATION UTILISATEURS
+  ======================================================= */
+
+  function registerUser(form) {
+    const email = normalize(form.email);
+
+    const existing = data.users.find(
+      (user) => normalize(user.email) === email
+    );
+
+    if (existing) {
+      notify("Cette adresse e-mail possède déjà un compte.");
+      return;
+    }
+
+    const number =
+      form.role === "youth"
+        ? data.counters.youth
+        : data.counters.responsible;
+
+    const matricule = generateMatricule({
+      gender: form.gender,
+      lastName: form.lastName,
+      nationality: form.nationality,
+      birthOrRegistrationMonth: form.registrationMonth,
+      number,
+    });
+
+    const newUser = {
+      id: safeRandomId(),
+      matricule,
+      role: form.role,
+
+      firstName: form.firstName,
+      lastName: form.lastName,
+
+      email: form.email,
+      phone: form.phone,
+
+      gender: form.gender,
+      nationality: form.nationality,
+      registrationMonth: form.registrationMonth,
+
+      birthDate: "",
+      church: "",
+      maritalStatus: "",
+      baptized: "",
+
+      photo: "",
+      cv: "",
+
+      deliveryAddress: "",
+
+      createdAt: new Date().toISOString(),
+
+      /*
+        Aucun mot de passe n'est stocké ici.
+        Cette version locale utilise une authentification
+        temporaire côté navigateur.
+      */
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      users: [...previous.users, newUser],
+
+      counters: {
+        ...previous.counters,
+
+        ...(form.role === "youth"
+          ? {
+              youth: previous.counters.youth + 1,
+            }
+          : {
+              responsible: previous.counters.responsible + 1,
+            }),
+      },
+    }));
+
+    setCurrentUser(newUser);
+    setAuthMode(null);
+    setPage("dashboard");
+
+    notify(
+      `Compte créé. Votre matricule est ${matricule}.`
+    );
+  }
+
+  function loginUser(form) {
+    /*
+      Dans cette maquette locale, le compte utilisateur
+      est retrouvé avec l'e-mail et le rôle.
+
+      Le vrai mot de passe devra être contrôlé par le backend
+      en production.
+    */
+
+    const user = data.users.find(
+      (item) =>
+        normalize(item.email) === normalize(form.email) &&
+        item.role === form.role
+    );
+
+    if (!user) {
+      notify(
+        "Compte introuvable. Vérifiez l'adresse e-mail et l'espace choisi."
+      );
+      return;
+    }
+
+    setCurrentUser(user);
+    setAuthMode(null);
+    setPage("dashboard");
+
+    notify(`Bienvenue ${user.firstName}.`);
+  }
+
+  function logout() {
+    setCurrentUser(null);
+    setAdminSession(null);
+    setCart([]);
+    setPage("home");
+
+    notify("Vous êtes déconnecté.");
+  }
+
+  function updateProfile(updates) {
+    if (!currentUser) return;
+
+    const updatedUser = {
+      ...currentUser,
+      ...updates,
+    };
+
+    updateData((previous) => ({
+      ...previous,
+      users: previous.users.map((user) =>
+        user.id === currentUser.id ? updatedUser : user
+      ),
+    }));
+
+    setCurrentUser(updatedUser);
+
+    notify("Votre profil a été enregistré.");
+  }
+
+  /* =======================================================
+     REQUÊTES
+  ======================================================= */
+
+  function addRequest(subject, description) {
+    if (!currentUser) return;
+
+    const number = data.counters.request;
+
+    const request = {
+      id: safeRandomId(),
+      reference: makeReference("REQ", number),
+
+      userId: currentUser.id,
+      matricule: currentUser.matricule,
+
+      subject,
+      description,
+
+      status: "En attente",
+
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      requests: [...previous.requests, request],
+
+      counters: {
+        ...previous.counters,
+        request: previous.counters.request + 1,
+      },
+    }));
+
+    notify("Votre requête a été envoyée.");
+  }
+
+  /* =======================================================
+     PROJETS
+  ======================================================= */
+
+  function addProject(title, description) {
+    if (!currentUser) return;
+
+    const number = data.counters.project;
+
+    const project = {
+      id: safeRandomId(),
+      reference: makeReference("PRO", number),
+
+      userId: currentUser.id,
+      matricule: currentUser.matricule,
+
+      title,
+      description,
+
+      status: "Soumis",
+
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      projects: [...previous.projects, project],
+
+      counters: {
+        ...previous.counters,
+        project: previous.counters.project + 1,
+      },
+    }));
+
+    notify("Votre projet a été soumis.");
+  }
+
+  /* =======================================================
+     ÉGLISES
+  ======================================================= */
+
+  function addChurch(form) {
+    if (!currentUser) return;
+
+    const number = data.counters.church;
+
+    const church = {
+      id: safeRandomId(),
+
+      reference: makeReference("EGL", number),
+
+      name: form.name,
+      city: form.city,
+      location: form.location,
+
+      pastor: form.pastor,
+      pastorPhone: form.pastorPhone,
+
+      submittedBy: currentUser.matricule,
+
+      status: "En attente",
+
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      churches: [...previous.churches, church],
+
+      counters: {
+        ...previous.counters,
+        church: previous.counters.church + 1,
+      },
+    }));
+
+    notify("L'église a été soumise pour validation.");
+  }
+
+  function validateChurch(churchId) {
+    updateData((previous) => ({
+      ...previous,
+
+      churches: previous.churches.map((church) =>
+        church.id === churchId
+          ? {
+              ...church,
+              status: "Validée",
+              validatedAt: new Date().toISOString(),
+            }
+          : church
+      ),
+    }));
+
+    addActivity("Validation église", churchId);
+
+    notify("Église validée.");
+  }
+
+  function rejectChurch(churchId) {
+    updateData((previous) => ({
+      ...previous,
+
+      churches: previous.churches.map((church) =>
+        church.id === churchId
+          ? {
+              ...church,
+              status: "Rejetée",
+              rejectedAt: new Date().toISOString(),
+            }
+          : church
+      ),
+    }));
+
+    addActivity("Rejet église", churchId);
+
+    notify("Église rejetée.");
+  }
+
+  /* =======================================================
+     PANIER
+  ======================================================= */
+
+  function addToCart(product, size = "") {
+    if (!product.stock) {
+      notify("Ce produit est actuellement en rupture de stock.");
+      return;
+    }
+
+    setCart((previous) => {
+      const existing = previous.find(
+        (item) =>
+          item.id === product.id &&
+          item.size === size
+      );
+
+      if (existing) {
+        return previous.map((item) =>
+          item.id === product.id &&
+          item.size === size
+            ? {
+                ...item,
+                quantity: Math.min(
+                  item.quantity + 1,
+                  product.stock
+                ),
+              }
+            : item
+        );
+      }
+
+      return [
+        ...previous,
+        {
+          ...product,
+          quantity: 1,
+          size,
+        },
+      ];
+    });
+
+    notify("Article ajouté au panier.");
+  }
+
+  function removeFromCart(productId, size = "") {
+    setCart((previous) =>
+      previous.filter(
+        (item) =>
+          !(
+            item.id === productId &&
+            item.size === size
+          )
+      )
+    );
+  }
+
+  function updateCartQuantity(productId, size, quantity) {
+    setCart((previous) =>
+      previous.map((item) =>
+        item.id === productId &&
+        item.size === size
+          ? {
+              ...item,
+              quantity: Math.max(
+                1,
+                Math.min(
+                  Number(quantity),
+                  item.stock
+                )
+              ),
+            }
+          : item
+      )
+    );
+  }
+
+  /* =======================================================
+     COMMANDES
+  ======================================================= */
+
+  function createOrder() {
+    if (!currentUser) {
+      notify("Connectez-vous pour passer une commande.");
+
+      setAuthRole("youth");
+      setAuthMode("login");
+      setPage("auth");
+
+      return;
+    }
+
+    if (!cart.length) {
+      notify("Votre panier est vide.");
+      return;
+    }
+
+    const number = data.counters.order;
+
+    const order = {
+      id: safeRandomId(),
+
+      reference: makeReference("CMD", number),
+
+      userId: currentUser.id,
+      matricule: currentUser.matricule,
+
+      customer: {
+        firstName: currentUser.firstName,
+        lastName: currentUser.lastName,
+        email: currentUser.email,
+        phone: currentUser.phone,
+      },
+
+      deliveryAddress: currentUser.deliveryAddress || "",
+
+      items: cart.map((item) => ({
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        size: item.size || "",
+      })),
+
+      total: cartTotal,
+
+      status: "En attente de paiement",
+
+      paymentStatus: "En attente",
+
+      receiptCode: null,
+
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      orders: [...previous.orders, order],
+
+      products: previous.products.map((product) => {
+        const quantity = cart
+          .filter((item) => item.id === product.id)
+          .reduce(
+            (sum, item) => sum + item.quantity,
+            0
+          );
+
+        return quantity
+          ? {
+              ...product,
+              stock: Math.max(
+                0,
+                product.stock - quantity
+              ),
+            }
+          : product;
+      }),
+
+      counters: {
+        ...previous.counters,
+        order: previous.counters.order + 1,
+      },
+    }));
+
+    setCart([]);
+
+    setPage("dashboard");
+
+    notify(
+      `Commande ${order.reference} créée.`
+    );
+  }
+
+  /* =======================================================
+     PAIEMENT
+  ======================================================= */
+
+  function payOrder(orderId) {
+    const order = data.orders.find(
+      (item) => item.id === orderId
+    );
+
+    if (!order) {
+      notify("Commande introuvable.");
+      return;
+    }
+
+    if (order.paymentStatus === "Payé") {
+      notify("Cette commande est déjà payée.");
+      return;
+    }
+
+    const receiptNumber = data.counters.receipt;
+
+    const receiptCode = generateReceiptCode(
+      receiptNumber
+    );
+
+    const payment = {
+      id: safeRandomId(),
+
+      orderId: order.id,
+
+      reference: order.reference,
+
+      userId: order.userId,
+
+      matricule: order.matricule,
+
+      amount: order.total,
+
+      method: "Paiement de démonstration",
+
+      status: "Payé",
+
+      receiptCode,
+
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      orders: previous.orders.map((item) =>
+        item.id === orderId
+          ? {
+              ...item,
+              status: "Payée",
+              paymentStatus: "Payé",
+              receiptCode,
+              paidAt: new Date().toISOString(),
+            }
+          : item
+      ),
+
+      payments: [
+        ...previous.payments,
+        payment,
+      ],
+
+      counters: {
+        ...previous.counters,
+        receipt: previous.counters.receipt + 1,
+      },
+    }));
+
+    notify(
+      `Paiement confirmé. Reçu ${receiptCode} disponible.`
+    );
+  }
+
+  /* =======================================================
+     REÇU
+  ======================================================= */
+
+  function printReceipt(order) {
+    if (!order || order.paymentStatus !== "Payé") {
+      notify(
+        "Le reçu est disponible uniquement après paiement."
+      );
+      return;
+    }
+
+    const receiptWindow = window.open(
+      "",
+      "_blank",
+      "width=900,height=900"
+    );
+
+    if (!receiptWindow) {
+      notify(
+        "Le navigateur a bloqué la fenêtre du reçu."
+      );
+      return;
+    }
+
+    const customerName = `${order.customer?.firstName || ""} ${
+      order.customer?.lastName || ""
+    }`.trim();
+
+    const rows = order.items
+      .map(
+        (item) => `
+          <tr>
+            <td>${escapeHtml(item.name)}</td>
+            <td>${item.quantity}</td>
+            <td>${escapeHtml(item.size || "-")}</td>
+            <td>${money(item.price)}</td>
+            <td>${money(item.price * item.quantity)}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    receiptWindow.document.write(`
+      <!doctype html>
+      <html lang="fr">
+        <head>
+          <meta charset="UTF-8" />
+          <title>Reçu ${escapeHtml(order.receiptCode)}</title>
+
+          <style>
+            @page {
+              size: A4;
+              margin: 12mm;
+            }
+
+            * {
+              box-sizing: border-box;
+            }
+
+            body {
+              margin: 0;
+              font-family: Arial, Helvetica, sans-serif;
+              background: #f3f6fb;
+              color: #172033;
+            }
+
+            .receipt {
+              width: 100%;
+              max-width: 794px;
+              margin: 0 auto;
+              background: white;
+              padding: 38px;
+              border-top: 10px solid #155eef;
+              min-height: 100vh;
+            }
+
+            .head {
+              display: flex;
+              justify-content: space-between;
+              gap: 30px;
+              align-items: flex-start;
+              border-bottom: 1px solid #dfe5ef;
+              padding-bottom: 25px;
+            }
+
+            .brand {
+              font-size: 34px;
+              font-weight: 900;
+              letter-spacing: -1px;
+              color: #155eef;
+            }
+
+            .brand span {
+              color: #f5c400;
+            }
+
+            .receipt-title {
+              text-align: right;
+            }
+
+            .receipt-title h1 {
+              margin: 0;
+              font-size: 25px;
+            }
+
+            .code {
+              margin-top: 8px;
+              font-weight: 800;
+              color: #6633cc;
+            }
+
+            .info {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 18px;
+              margin: 28px 0;
+            }
+
+            .box {
+              padding: 18px;
+              background: #f7f9fc;
+              border-radius: 12px;
+            }
+
+            .label {
+              display: block;
+              color: #718096;
+              font-size: 12px;
+              margin-bottom: 5px;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+
+            th,
+            td {
+              padding: 12px 8px;
+              border-bottom: 1px solid #e4e8ef;
+              text-align: left;
+            }
+
+            th {
+              font-size: 12px;
+              text-transform: uppercase;
+              color: #657083;
+            }
+
+            .total {
+              margin-top: 25px;
+              margin-left: auto;
+              max-width: 300px;
+              padding: 20px;
+              background: #155eef;
+              color: white;
+              border-radius: 14px;
+            }
+
+            .total strong {
+              display: block;
+              font-size: 26px;
+              margin-top: 6px;
+            }
+
+            .paid {
+              margin-top: 25px;
+              padding: 14px;
+              background: #e7f8ef;
+              color: #16784a;
+              border-radius: 10px;
+              font-weight: 800;
+            }
+
+            .footer {
+              margin-top: 45px;
+              padding-top: 18px;
+              border-top: 1px solid #e1e5eb;
+              font-size: 11px;
+              color: #778196;
+              text-align: center;
+            }
+
+            @media print {
+              body {
+                background: white;
+              }
+
+              .receipt {
+                max-width: none;
+                min-height: auto;
+              }
+            }
+          </style>
+        </head>
+
+        <body>
+          <div class="receipt">
+
+            <div class="head">
+              <div>
+                <div class="brand">
+                  JAD<span>CI</span>
+                </div>
+
+                <div>
+                  Reçu officiel de paiement
+                </div>
+              </div>
+
+              <div class="receipt-title">
+                <h1>REÇU</h1>
+
+                <div class="code">
+                  ${escapeHtml(order.receiptCode)}
+                </div>
+              </div>
+            </div>
+
+            <div class="info">
+
+              <div class="box">
+                <span class="label">
+                  CLIENT
+                </span>
+
+                <strong>
+                  ${escapeHtml(customerName)}
+                </strong>
+
+                <br />
+
+                Matricule :
+                ${escapeHtml(order.matricule)}
+
+                <br />
+
+                ${escapeHtml(order.customer?.email || "")}
+
+                <br />
+
+                ${escapeHtml(order.customer?.phone || "")}
+              </div>
+
+              <div class="box">
+                <span class="label">
+                  COMMANDE
+                </span>
+
+                Référence :
+                <strong>
+                  ${escapeHtml(order.reference)}
+                </strong>
+
+                <br />
+
+                Date :
+                ${escapeHtml(formatDate(order.createdAt))}
+
+                <br />
+
+                Paiement :
+                <strong>Payé</strong>
+              </div>
+
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Qté</th>
+                  <th>Taille</th>
+                  <th>Prix</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+
+            <div class="total">
+              TOTAL PAYÉ
+              <strong>${money(order.total)}</strong>
+            </div>
+
+            <div class="paid">
+              ✓ Paiement enregistré
+              <br />
+              Code unique :
+              ${escapeHtml(order.receiptCode)}
+            </div>
+
+            <div class="footer">
+              JADCI — Plateforme de gestion et de services.
+              <br />
+              Ce document constitue le reçu de la commande
+              ${escapeHtml(order.reference)}.
+            </div>
+
+          </div>
+
+          <script>
+            window.onload = function () {
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+
+    receiptWindow.document.close();
+  }
+
+  /* =======================================================
+     CANDIDATURES
+  ======================================================= */
+
+  function addApplication(title, messageText) {
+    if (!currentUser) return;
+
+    const number = data.counters.application;
+
+    const application = {
+      id: safeRandomId(),
+      reference: makeReference("CAN", number),
+      userId: currentUser.id,
+      matricule: currentUser.matricule,
+      title,
+      message: messageText,
+      status: "En traitement",
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      applications: [
+        ...previous.applications,
+        application,
+      ],
+
+      counters: {
+        ...previous.counters,
+        application:
+          previous.counters.application + 1,
+      },
+    }));
+
+    notify("Votre candidature a été transmise.");
+  }
+
+  /* =======================================================
+     RECOMMANDATIONS
+  ======================================================= */
+
+  function addRecommendation(title, text) {
+    if (!currentUser) return;
+
+    const number = data.counters.recommendation;
+
+    const recommendation = {
+      id: safeRandomId(),
+      reference: makeReference("REC", number),
+      userId: currentUser.id,
+      matricule: currentUser.matricule,
+      title,
+      text,
+      status: "En attente",
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      recommendations: [
+        ...previous.recommendations,
+        recommendation,
+      ],
+
+      counters: {
+        ...previous.counters,
+        recommendation:
+          previous.counters.recommendation + 1,
+      },
+    }));
+
+    notify("Votre recommandation a été transmise.");
+  }
+
+  /* =======================================================
+     RAPPORTS
+  ======================================================= */
+
+  function addReport(title, text) {
+    if (!currentUser) return;
+
+    const number = data.counters.report;
+
+    const report = {
+      id: safeRandomId(),
+      reference: makeReference("RAP", number),
+      userId: currentUser.id,
+      matricule: currentUser.matricule,
+      title,
+      text,
+      status: "Transmis",
+      createdAt: new Date().toISOString(),
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      reports: [...previous.reports, report],
+
+      counters: {
+        ...previous.counters,
+        report: previous.counters.report + 1,
+      },
+    }));
+
+    notify("Votre rapport a été transmis.");
+  }
+
+  /* =======================================================
+     EXPORTS
+  ======================================================= */
+
+  function exportExcel(type) {
+    let rows = [];
+
+    if (type === "users") {
+      rows = [
+        [
+          "Matricule",
+          "Nom",
+          "Prénom",
+          "Rôle",
+          "Genre",
+          "Nationalité",
+          "Email",
+          "Téléphone",
+          "Église",
+          "Baptême",
+          "Situation matrimoniale",
+          "Date inscription",
+        ],
+        ...data.users.map((user) => [
+          user.matricule,
+          user.lastName,
+          user.firstName,
+          user.role === "youth"
+            ? "Jeune"
+            : "Responsable",
+          user.gender,
+          user.nationality,
+          user.email,
+          user.phone,
+          user.church,
+          user.baptized,
+          user.maritalStatus,
+          formatDate(user.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "requests") {
+      rows = [
+        [
+          "Référence",
+          "Matricule",
+          "Objet",
+          "Description",
+          "Statut",
+          "Date",
+        ],
+        ...data.requests.map((item) => [
+          item.reference,
+          item.matricule,
+          item.subject,
+          item.description,
+          item.status,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "projects") {
+      rows = [
+        [
+          "Référence",
+          "Matricule",
+          "Titre",
+          "Description",
+          "Statut",
+          "Date",
+        ],
+        ...data.projects.map((item) => [
+          item.reference,
+          item.matricule,
+          item.title,
+          item.description,
+          item.status,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "churches") {
+      rows = [
+        [
+          "Référence",
+          "Église",
+          "Ville",
+          "Localisation",
+          "Pasteur",
+          "Téléphone",
+          "Soumise par",
+          "Statut",
+          "Date",
+        ],
+        ...data.churches.map((item) => [
+          item.reference,
+          item.name,
+          item.city,
+          item.location,
+          item.pastor,
+          item.pastorPhone,
+          item.submittedBy,
+          item.status,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "orders") {
+      rows = [
+        [
+          "Commande",
+          "Matricule",
+          "Montant",
+          "Statut",
+          "Paiement",
+          "Code reçu",
+          "Date",
+        ],
+        ...data.orders.map((item) => [
+          item.reference,
+          item.matricule,
+          item.total,
+          item.status,
+          item.paymentStatus,
+          item.receiptCode || "",
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "payments") {
+      rows = [
+        [
+          "Commande",
+          "Matricule",
+          "Montant",
+          "Méthode",
+          "Statut",
+          "Code reçu",
+          "Date",
+        ],
+        ...data.payments.map((item) => [
+          item.reference,
+          item.matricule,
+          item.amount,
+          item.method,
+          item.status,
+          item.receiptCode,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "applications") {
+      rows = [
+        [
+          "Référence",
+          "Matricule",
+          "Titre",
+          "Message",
+          "Statut",
+          "Date",
+        ],
+        ...data.applications.map((item) => [
+          item.reference,
+          item.matricule,
+          item.title,
+          item.message,
+          item.status,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "recommendations") {
+      rows = [
+        [
+          "Référence",
+          "Matricule",
+          "Titre",
+          "Texte",
+          "Statut",
+          "Date",
+        ],
+        ...data.recommendations.map((item) => [
+          item.reference,
+          item.matricule,
+          item.title,
+          item.text,
+          item.status,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (type === "reports") {
+      rows = [
+        [
+          "Référence",
+          "Matricule",
+          "Titre",
+          "Rapport",
+          "Statut",
+          "Date",
+        ],
+        ...data.reports.map((item) => [
+          item.reference,
+          item.matricule,
+          item.title,
+          item.text,
+          item.status,
+          formatDate(item.createdAt),
+        ]),
+      ];
+    }
+
+    if (!rows.length) {
+      notify("Aucune donnée à exporter.");
+      return;
+    }
+
+    const csv = rows
+      .map((row) =>
+        row
+          .map(
+            (value) =>
+              `"${String(value ?? "").replaceAll(
+                '"',
+                '""'
+              )}"`
+          )
+          .join(";")
+      )
+      .join("\n");
+
+    const blob = new Blob(["\ufeff" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `JADCI-${type}-${Date.now()}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+
+    notify(
+      "Export terminé. Le fichier CSV peut être ouvert avec Excel."
+    );
+  }
+
+  /* =======================================================
+     ADMINISTRATION
+  ======================================================= */
+
+  function loginAdmin(form) {
+    const account = Object.entries(
+      ADMIN_ACCOUNTS
+    ).find(
+      ([, item]) =>
+        item.matricule === form.matricule &&
+        item.password === form.password
+    );
+
+    if (!account) {
+      notify("Identifiants administrateur incorrects.");
+      return;
+    }
+
+    const [role, accountData] = account;
+
+    setAdminSession({
+      role,
+      matricule: accountData.matricule,
+      label: accountData.label,
+    });
+
+    setPage("admin");
+
+    notify(`Bienvenue dans le portail ${accountData.label}.`);
+  }
+
+  function adminLogout() {
+    setAdminSession(null);
+    setPage("home");
+    notify("Session administrateur fermée.");
+  }
+
+  function deleteProduct(productId) {
+    if (!adminSession) return;
+
+    updateData((previous) => ({
+      ...previous,
+
+      products: previous.products.filter(
+        (product) => product.id !== productId
+      ),
+    }));
+
+    addActivity("Suppression produit", productId);
+
+    notify("Produit supprimé.");
+  }
+
+  function updateProduct(productId, updates) {
+    if (!adminSession) return;
+
+    updateData((previous) => ({
+      ...previous,
+
+      products: previous.products.map((product) =>
+        product.id === productId
+          ? {
+              ...product,
+              ...updates,
+            }
+          : product
+      ),
+    }));
+
+    addActivity("Modification produit", productId);
+
+    notify("Produit modifié.");
+  }
+
+  function addProduct(product) {
+    if (!adminSession) return;
+
+    const newProduct = {
+      id: safeRandomId(),
+      name: product.name,
+      price: Number(product.price) || 0,
+      stock: Number(product.stock) || 0,
+      category: product.category,
+      description: product.description,
+      image: product.image || "",
+      sizes: product.sizes || [],
+    };
+
+    updateData((previous) => ({
+      ...previous,
+      products: [
+        ...previous.products,
+        newProduct,
+      ],
+    }));
+
+    addActivity("Ajout produit", newProduct.name);
+
+    notify("Produit ajouté.");
+  }
+
+  function deleteNews(newsId) {
+    if (!adminSession) return;
+
+    updateData((previous) => ({
+      ...previous,
+
+      news: previous.news.filter(
+        (item) => item.id !== newsId
+      ),
+    }));
+
+    addActivity("Suppression actualité", newsId);
+
+    notify("Publication supprimée.");
+  }
+
+  function addNews(form) {
+    if (!adminSession) return;
+
+    const item = {
+      id: safeRandomId(),
+      title: form.title,
+      text: form.text,
+      type: form.type || "actualite",
+      image: form.image || "",
+      video: form.video || "",
+      document: form.document || "",
+      date: new Date().toLocaleDateString("fr-FR"),
+      published: true,
+    };
+
+    updateData((previous) => ({
+      ...previous,
+
+      news: [item, ...previous.news],
+    }));
+
+    addActivity("Publication actualité", item.title);
+
+    notify("Publication créée.");
+  }
+
+  /* =======================================================
+     RENDU
+  ======================================================= */
+
+  return (
+    <div className="jadci-app">
+
+      <header className="topbar">
+
+        <button
+          className="logo"
+          type="button"
+          onClick={() => setPage("home")}
+        >
+          JADCI
+        </button>
+
+        <nav>
+
+          <button
+            type="button"
+            onClick={() => setPage("home")}
+          >
+            Accueil
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPage("news")}
+          >
+            Actualités
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPage("media")}
+          >
+            Médiat
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPage("churches")}
+          >
+            Églises
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setPage("shop")}
+          >
+            Boutique
+          </button>
+
+          {!currentUser && !adminSession && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthRole("youth");
+                  setAuthMode("login");
+                  setPage("auth");
+                }}
+              >
+                Espace Jeunes
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthRole("responsible");
+                  setAuthMode("login");
+                  setPage("auth");
+                }}
+              >
+                Espace Responsables
+              </button>
+            </>
+          )}
+
+          {currentUser && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPage("dashboard")}
+              >
+                Mon espace
+              </button>
+
+              <button
+                type="button"
+                onClick={logout}
+              >
+                Déconnexion
+              </button>
+            </>
+          )}
+
+          {!adminSession && (
+            <button
+              type="button"
+              onClick={() => setPage("adminLogin")}
+            >
+              Portail
+            </button>
+          )}
+
+          {adminSession && (
+            <>
+              <button
+                type="button"
+                onClick={() => setPage("admin")}
+              >
+                Administration
+              </button>
+
+              <button
+                type="button"
+                onClick={adminLogout}
+              >
+                Quitter admin
+              </button>
+            </>
+          )}
+
+        </nav>
+      </header>
+
+      {message && (
+        <div className="toast">
+          {message}
+        </div>
+      )}
+
+      <main>
+
+        {page === "home" && (
+          <Home
+            news={data.news}
+            onYouth={() => {
+              setAuthRole("youth");
+              setAuthMode("register");
+              setPage("auth");
+            }}
+            onResponsible={() => {
+              setAuthRole("responsible");
+              setAuthMode("register");
+              setPage("auth");
+            }}
+            onShop={() => setPage("shop")}
+            onNews={() => setPage("news")}
+          />
+        )}
+
+        {page === "news" && (
+          <NewsPage news={data.news} />
+        )}
+
+        {page === "media" && (
+          <MediaPage />
+        )}
+
+        {page === "churches" && (
+          <ChurchDirectory
+            churches={data.churches}
+          />
+        )}
+
+        {page === "auth" && (
+          <AuthPage
+            mode={authMode || "login"}
+            role={authRole}
+            setMode={setAuthMode}
+            setRole={setAuthRole}
+            onRegister={registerUser}
+            onLogin={loginUser}
+          />
+        )}
+
+        {page === "dashboard" && currentUser && (
+          <Dashboard
+            user={currentUser}
+            data={data}
+            orders={userOrders}
+            onUpdateProfile={updateProfile}
+            onRequest={addRequest}
+            onProject={addProject}
+            onChurch={addChurch}
+            onPayment={payOrder}
+            onReceipt={printReceipt}
+            onApplication={addApplication}
+            onRecommendation={addRecommendation}
+            onReport={addReport}
+            onShop={() => setPage("shop")}
+          />
+        )}
+
+        {page === "shop" && (
+          <Shop
+            products={data.products}
+            cart={cart}
+            total={cartTotal}
+            onAdd={addToCart}
+            onRemove={removeFromCart}
+            onQuantity={updateCartQuantity}
+            onOrder={createOrder}
+            onLogin={() => {
+              setAuthRole(
+                currentUser?.role || "youth"
+              );
+
+              setAuthMode("login");
+              setPage("auth");
+            }}
+            connected={Boolean(currentUser)}
+          />
+        )}
+
+        {page === "adminLogin" && (
+          <AdminLogin
+            onLogin={loginAdmin}
+            onBack={() => setPage("home")}
+          />
+        )}
+
+        {page === "admin" && adminSession && (
+          <AdminPortal
+            session={adminSession}
+            data={data}
+            onValidateChurch={validateChurch}
+            onRejectChurch={rejectChurch}
+            onDeleteProduct={deleteProduct}
+            onAddProduct={addProduct}
+            onUpdateProduct={updateProduct}
+            onDeleteNews={deleteNews}
+            onAddNews={addNews}
+            onExport={exportExcel}
+          />
+        )}
+
+      </main>
+
+      <footer>
+
+        <strong>JADCI</strong>
+
+        <span>
+          Plateforme de gestion, d'information,
+          de services et de développement.
+        </span>
+
+      </footer>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ACCUEIL
+========================================================= */
+
+function Home({
+  onYouth,
+  onResponsible,
+  onShop,
+  onNews,
+}) {
+  return (
+    <section className="home">
+
+      <div className="announcement-bar">
+        <div className="announcement-track">
+          ✦ JADCI · Jeunesse · Engagement · Développement ·
+          Communauté · Actualités · Boutique · Services ·
+          ✦ JADCI · Ensemble pour construire l'avenir
+        </div>
+      </div>
+
+      <div className="hero">
+
+        <div className="hero-content">
+
+          <span className="eyebrow">
+            JADCI · PLATEFORME OFFICIELLE
+          </span>
+
+          <h1>
+            Jeunesse.
+            <br />
+            Engagement.
+            <br />
+            <span>Impact.</span>
+          </h1>
+
+          <p>
+            Une plateforme moderne pour connecter
+            les jeunes, les responsables, les églises
+            et les services JADCI.
+          </p>
+
+          <div className="hero-actions">
+
+            <button
+              className="primary"
+              type="button"
+              onClick={onYouth}
+            >
+              🟨 Espace Jeunes
+            </button>
+
+            <button
+              className="green"
+              type="button"
+              onClick={onResponsible}
+            >
+              🟩 Espace Responsables
+            </button>
+
+            <button
+              type="button"
+              onClick={onShop}
+            >
+              🛒 Boutique
+            </button>
+
+          </div>
+
+        </div>
+
+        <div className="hero-orbit">
+          <div className="hero-orbit-inner">
+            JADCI
+          </div>
+        </div>
+
+      </div>
+
+      <section className="cards-section">
+
+        <div className="info-card yellow">
+
+          <span>01</span>
+
+          <h2>
+            Espace Jeunes
+          </h2>
+
+          <p>
+            Votre bureau personnel pour gérer
+            votre profil, vos requêtes, vos projets,
+            vos commandes et vos informations.
+          </p>
+
+          <button
+            type="button"
+            onClick={onYouth}
+          >
+            Accéder à mon espace →
+          </button>
+
+        </div>
+
+        <div className="info-card green">
+
+          <span>02</span>
+
+          <h2>
+            Espace Responsables
+          </h2>
+
+          <p>
+            Gérez vos activités, projets,
+            recommandations, rapports,
+            convocations et églises.
+          </p>
+
+          <button
+            type="button"
+            onClick={onResponsible}
+          >
+            Accéder à mon espace →
+          </button>
+
+        </div>
+
+        <div className="info-card violet">
+
+          <span>03</span>
+
+          <h2>
+            Actualités
+          </h2>
+
+          <p>
+            Retrouvez les annonces, publications,
+            informations et contenus JADCI.
+          </p>
+
+          <button
+            type="button"
+            onClick={onNews}
+          >
+            Découvrir →
+          </button>
+
+        </div>
+
+      </section>
+    </section>
+  );
+}
+
+/* =========================================================
+   AUTH
+========================================================= */
+
+function AuthPage({
+  mode,
+  role,
+  setMode,
+  setRole,
+  onRegister,
+  onLogin,
+}) {
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    gender: "Homme",
+    nationality: "Ivoirienne",
+    registrationMonth:
+      new Date().getMonth() + 1,
+  });
+
+  const isRegister = mode === "register";
+
+  function update(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (isRegister) {
+      if (
+        !form.firstName ||
+        !form.lastName ||
+        !form.email
+      ) {
+        return;
+      }
+
+      onRegister({
+        ...form,
+        role,
+      });
+
+      return;
+    }
+
+    onLogin({
+      email: form.email,
+      role,
+    });
+  }
+
+  return (
+    <section className="auth-page">
+
+      <div className="auth-card">
+
+        <div className="role-switch">
+
+          <button
+            type="button"
+            className={
+              role === "youth"
+                ? "selected yellow-bg"
+                : ""
+            }
+            onClick={() => setRole("youth")}
+          >
+            🟨 Jeunes
+          </button>
+
+          <button
+            type="button"
+            className={
+              role === "responsible"
+                ? "selected green-bg"
+                : ""
+            }
+            onClick={() =>
+              setRole("responsible")
+            }
+          >
+            🟩 Responsables
+          </button>
+
+        </div>
+
+        <span className="eyebrow">
+          {role === "youth"
+            ? "ESPACE JEUNES"
+            : "ESPACE RESPONSABLES"}
+        </span>
+
+        <h1>
+          {isRegister
+            ? "Créer votre espace"
+            : "Retrouver votre espace"}
+        </h1>
+
+        <p className="muted">
+          Un compte correspond à un seul espace
+          personnel.
+        </p>
+
+        <form onSubmit={submit}>
+
+          {isRegister && (
+            <>
+              <label>
+                Prénom
+                <input
+                  value={form.firstName}
+                  onChange={(event) =>
+                    update(
+                      "firstName",
+                      event.target.value
+                    )
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Nom
+                <input
+                  value={form.lastName}
+                  onChange={(event) =>
+                    update(
+                      "lastName",
+                      event.target.value
+                    )
+                  }
+                  required
+                />
+              </label>
+
+              <label>
+                Genre
+                <select
+                  value={form.gender}
+                  onChange={(event) =>
+                    update(
+                      "gender",
+                      event.target.value
+                    )
+                  }
+                >
+                  <option>Homme</option>
+                  <option>Femme</option>
+                </select>
+              </label>
+
+              <label>
+                Nationalité
+                <select
+                  value={form.nationality}
+                  onChange={(event) =>
+                    update(
+                      "nationality",
+                      event.target.value
+                    )
+                  }
+                >
+                  <option>Ivoirienne</option>
+                  <option>Autre</option>
+                </select>
+              </label>
+
+              <label>
+                Mois d'inscription
+                <select
+                  value={form.registrationMonth}
+                  onChange={(event) =>
+                    update(
+                      "registrationMonth",
+                      event.target.value
+                    )
+                  }
+                >
+                  {Array.from(
+                    { length: 12 },
+                    (_, index) => (
+                      <option
+                        key={index + 1}
+                        value={index + 1}
+                      >
+                        {index + 1}
+                      </option>
+                    )
+                  )}
+                </select>
+              </label>
+
+              <label>
+                Téléphone
+                <input
+                  value={form.phone}
+                  onChange={(event) =>
+                    update(
+                      "phone",
+                      event.target.value
+                    )
+                  }
+                />
+              </label>
+            </>
+          )}
+
+          <label>
+            Adresse e-mail
+            <input
+              type="email"
+              value={form.email}
+              onChange={(event) =>
+                update(
+                  "email",
+                  event.target.value
+                )
+              }
+              required
+            />
+          </label>
+
+          <button
+            className="primary full"
+            type="submit"
+          >
+            {isRegister
+              ? "Créer mon espace"
+              : "Accéder à mon espace"}
+          </button>
+
+        </form>
+
+        <div className="auth-links">
+
+          {isRegister ? (
+            <button
+              type="button"
+              onClick={() =>
+                setMode("login")
+              }
+            >
+              J'ai déjà un compte
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() =>
+                setMode("register")
+              }
+            >
+              Créer un compte
+            </button>
+          )}
+
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
+
+function Dashboard({
+  user,
+  data,
+  orders,
+  onUpdateProfile,
+  onRequest,
+  onProject,
+  onChurch,
+  onPayment,
+  onReceipt,
+  onApplication,
+  onRecommendation,
+  onReport,
+  onShop,
+}) {
+  const [tab, setTab] =
+    useState("overview");
+
+  const userRequests =
+    data.requests.filter(
+      (item) => item.userId === user.id
+    );
+
+  const userProjects =
+    data.projects.filter(
+      (item) => item.userId === user.id
+    );
+
+  const userApplications =
+    data.applications.filter(
+      (item) => item.userId === user.id
+    );
+
+  const userRecommendations =
+    data.recommendations.filter(
+      (item) => item.userId === user.id
+    );
+
+  const userReports =
+    data.reports.filter(
+      (item) => item.userId === user.id
+    );
+
+  return (
+    <section className="dashboard">
+
+      <div className="dashboard-head">
+
+        <div>
+
+          <span className="eyebrow">
+            {user.role === "youth"
+              ? "ESPACE · JEUNES"
+              : "ESPACE · RESPONSABLES"}
+          </span>
+
+          <h1>
+            Bonjour {user.firstName} 👋
+          </h1>
+
+          <p>
+            Matricule :
+            <strong>
+              {" "}
+              {user.matricule}
+            </strong>
+          </p>
+
+        </div>
+
+        <div className="avatar">
+
+          {user.photo ? (
+            <img
+              src={user.photo}
+              alt="Profil"
+            />
+          ) : (
+            user.firstName?.charAt(0)
+          )}
+
+        </div>
+
+      </div>
+
+      <div className="dashboard-grid">
+
+        <aside className="side-menu">
+
+          <button
+            className={
+              tab === "overview"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setTab("overview")
+            }
+          >
+            🏠 Mon bureau
+          </button>
+
+          <button
+            className={
+              tab === "profile"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setTab("profile")
+            }
+          >
+            👤 Mon profil
+          </button>
+
+          <button
+            className={
+              tab === "requests"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setTab("requests")
+            }
+          >
+            📝 Mes requêtes
+          </button>
+
+          <button
+            className={
+              tab === "projects"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setTab("projects")
+            }
+          >
+            💡 Mes projets
+          </button>
+
+          <button
+            className={
+              tab === "orders"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setTab("orders")
+            }
+          >
+            🛒 Mes commandes
+          </button>
+
+          {user.role === "responsible" && (
+            <>
+              <button
+                className={
+                  tab === "church"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setTab("church")
+                }
+              >
+                ⛪ Enregistrer une église
+              </button>
+
+              <button
+                className={
+                  tab === "applications"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setTab("applications")
+                }
+              >
+                📄 Candidature
+              </button>
+
+              <button
+                className={
+                  tab === "recommendations"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setTab("recommendations")
+                }
+              >
+                ⭐ Recommandations
+              </button>
+
+              <button
+                className={
+                  tab === "reports"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setTab("reports")
+                }
+              >
+                📊 Rapports
+              </button>
+            </>
+          )}
+
+        </aside>
+
+        <div className="dashboard-content">
+
+          {tab === "overview" && (
+            <DashboardOverview
+              user={user}
+              data={data}
+              orders={orders}
+              onShop={onShop}
+            />
+          )}
+
+          {tab === "profile" && (
+            <ProfileForm
+              user={user}
+              onSave={onUpdateProfile}
+            />
+          )}
+
+          {tab === "requests" && (
+            <RequestForm
+              requests={userRequests}
+              onSubmit={onRequest}
+            />
+          )}
+
+          {tab === "projects" && (
+            <ProjectForm
+              projects={userProjects}
+              onSubmit={onProject}
+            />
+          )}
+
+          {tab === "orders" && (
+            <Orders
+              orders={orders}
+              onPayment={onPayment}
+              onReceipt={onReceipt}
+            />
+          )}
+
+          {tab === "church" &&
+            user.role === "responsible" && (
+              <ChurchForm
+                churches={data.churches.filter(
+                  (church) =>
+                    church.submittedBy ===
+                    user.matricule
+                )}
+                onSubmit={onChurch}
+              />
+            )}
+
+          {tab === "applications" &&
+            user.role === "responsible" && (
+              <ApplicationForm
+                applications={
+                  userApplications
+                }
+                onSubmit={onApplication}
+              />
+            )}
+
+          {tab === "recommendations" &&
+            user.role === "responsible" && (
+              <RecommendationForm
+                recommendations={
+                  userRecommendations
+                }
+                onSubmit={
+                  onRecommendation
+                }
+              />
+            )}
+
+          {tab === "reports" &&
+            user.role === "responsible" && (
+              <ReportForm
+                reports={userReports}
+                onSubmit={onReport}
+              />
+            )}
+
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   OVERVIEW
+========================================================= */
+
+function DashboardOverview({
+  user,
+  data,
+  orders,
+  onShop,
+}) {
+  const requests =
+    data.requests.filter(
+      (item) => item.userId === user.id
+    );
+
+  const projects =
+    data.projects.filter(
+      (item) => item.userId === user.id
+    );
+
+  const paidOrders =
+    orders.filter(
+      (item) =>
+        item.paymentStatus === "Payé"
+    );
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        VOTRE BUREAU
+      </span>
+
+      <h2>
+        Votre espace personnel
+      </h2>
+
+      <p className="muted">
+        Retrouvez ici les informations,
+        activités et services qui vous concernent.
+      </p>
+
+      <div className="stats">
+
+        <div>
+          <strong>
+            {requests.length}
+          </strong>
+          <span>
+            Requêtes
+          </span>
+        </div>
+
+        <div>
+          <strong>
+            {projects.length}
+          </strong>
+          <span>
+            Projets
+          </span>
+        </div>
+
+        <div>
+          <strong>
+            {orders.length}
+          </strong>
+          <span>
+            Commandes
+          </span>
+        </div>
+
+        <div>
+          <strong>
+            {paidOrders.length}
+          </strong>
+          <span>
+            Paiements
+          </span>
+        </div>
+
+      </div>
+
+      <div className="notice">
+
+        <strong>
+          📢 Informations JADCI
+        </strong>
+
+        <p>
+          Consultez régulièrement les actualités
+          et les informations qui vous concernent.
+        </p>
+
+      </div>
+
+      <button
+        className="primary"
+        onClick={onShop}
+      >
+        🛒 Accéder à la boutique
+      </button>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   PROFIL
+========================================================= */
+
+function ProfileForm({
+  user,
+  onSave,
+}) {
+  const [form, setForm] =
+    useState({
+      firstName:
+        user.firstName || "",
+      lastName:
+        user.lastName || "",
+      phone:
+        user.phone || "",
+      birthDate:
+        user.birthDate || "",
+      church:
+        user.church || "",
+      maritalStatus:
+        user.maritalStatus || "",
+      baptized:
+        user.baptized || "",
+      photo:
+        user.photo || "",
+      cv:
+        user.cv || "",
+      deliveryAddress:
+        user.deliveryAddress || "",
+    });
+
+  function update(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        PROFIL
+      </span>
+
+      <h2>
+        Mes informations
+      </h2>
+
+      <div className="profile-badge">
+        Matricule :
+        <strong>
+          {" "}
+          {user.matricule}
+        </strong>
+      </div>
+
+      <div className="form-grid">
+
+        <label>
+          Prénom
+          <input
+            value={form.firstName}
+            onChange={(e) =>
+              update(
+                "firstName",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Nom
+          <input
+            value={form.lastName}
+            onChange={(e) =>
+              update(
+                "lastName",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          E-mail
+          <input
+            value={user.email}
+            disabled
+          />
+        </label>
+
+        <label>
+          Téléphone
+          <input
+            value={form.phone}
+            onChange={(e) =>
+              update(
+                "phone",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Date de naissance
+          <input
+            type="date"
+            value={form.birthDate}
+            onChange={(e) =>
+              update(
+                "birthDate",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Église
+          <input
+            value={form.church}
+            onChange={(e) =>
+              update(
+                "church",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Situation matrimoniale
+          <select
+            value={
+              form.maritalStatus
+            }
+            onChange={(e) =>
+              update(
+                "maritalStatus",
+                e.target.value
+              )
+            }
+          >
+            <option value="">
+              Choisir
+            </option>
+            <option>
+              Célibataire
+            </option>
+            <option>
+              Marié(e)
+            </option>
+            <option>
+              Concubinage
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Baptême d'eau
+          <select
+            value={form.baptized}
+            onChange={(e) =>
+              update(
+                "baptized",
+                e.target.value
+              )
+            }
+          >
+            <option value="">
+              Choisir
+            </option>
+            <option>
+              Oui
+            </option>
+            <option>
+              Non
+            </option>
+          </select>
+        </label>
+
+        <label className="wide">
+          Photo de profil
+          <input
+            placeholder="URL de la photo"
+            value={form.photo}
+            onChange={(e) =>
+              update(
+                "photo",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label className="wide">
+          Lieu de livraison
+          <textarea
+            placeholder="Adresse ou lieu de livraison"
+            value={
+              form.deliveryAddress
+            }
+            onChange={(e) =>
+              update(
+                "deliveryAddress",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label className="wide">
+          CV
+          <textarea
+            placeholder="Informations ou lien vers votre CV"
+            value={form.cv}
+            onChange={(e) =>
+              update(
+                "cv",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+      </div>
+
+      <button
+        className="primary"
+        onClick={() => onSave(form)}
+      >
+        Enregistrer mon profil
+      </button>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   REQUÊTES
+========================================================= */
+
+function RequestForm({
+  requests,
+  onSubmit,
+}) {
+  const [subject, setSubject] =
+    useState("");
+
+  const [description, setDescription] =
+    useState("");
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!subject || !description) {
+      return;
+    }
+
+    onSubmit(
+      subject,
+      description
+    );
+
+    setSubject("");
+    setDescription("");
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        REQUÊTES
+      </span>
+
+      <h2>
+        Mes requêtes
+      </h2>
+
+      <form
+        onSubmit={submit}
+        className="simple-form"
+      >
+
+        <label>
+          Objet
+          <input
+            value={subject}
+            onChange={(e) =>
+              setSubject(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Requête
+          <textarea
+            value={description}
+            onChange={(e) =>
+              setDescription(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <button className="primary">
+          Envoyer la requête
+        </button>
+
+      </form>
+
+      <div className="list">
+
+        {requests.map((item) => (
+          <div
+            className="list-item"
+            key={item.id}
+          >
+            <strong>
+              {item.reference}
+            </strong>
+
+            <span>
+              {item.subject}
+            </span>
+
+            <small>
+              {item.status}
+            </small>
+          </div>
+        ))}
+
+        {!requests.length && (
+          <p className="muted">
+            Aucune requête pour le moment.
+          </p>
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   PROJETS
+========================================================= */
+
+function ProjectForm({
+  projects,
+  onSubmit,
+}) {
+  const [title, setTitle] =
+    useState("");
+
+  const [description, setDescription] =
+    useState("");
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!title || !description) {
+      return;
+    }
+
+    onSubmit(
+      title,
+      description
+    );
+
+    setTitle("");
+    setDescription("");
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        PROJETS
+      </span>
+
+      <h2>
+        Mes projets
+      </h2>
+
+      <form
+        onSubmit={submit}
+        className="simple-form"
+      >
+
+        <label>
+          Titre
+          <input
+            value={title}
+            onChange={(e) =>
+              setTitle(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Présentation
+          <textarea
+            value={description}
+            onChange={(e) =>
+              setDescription(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <button className="primary">
+          Soumettre le projet
+        </button>
+
+      </form>
+
+      <div className="list">
+
+        {projects.map((project) => (
+          <div
+            className="list-item"
+            key={project.id}
+          >
+            <strong>
+              {project.reference}
+            </strong>
+
+            <span>
+              {project.title}
+            </span>
+
+            <small>
+              {project.status}
+            </small>
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ÉGLISE
+========================================================= */
+
+function ChurchForm({
+  churches,
+  onSubmit,
+}) {
+  const [form, setForm] =
+    useState({
+      name: "",
+      city: "",
+      location: "",
+      pastor: "",
+      pastorPhone: "",
+    });
+
+  function update(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (
+      !form.name ||
+      !form.city
+    ) {
+      return;
+    }
+
+    onSubmit(form);
+
+    setForm({
+      name: "",
+      city: "",
+      location: "",
+      pastor: "",
+      pastorPhone: "",
+    });
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        ÉGLISE
+      </span>
+
+      <h2>
+        Enregistrer une église
+      </h2>
+
+      <p className="muted">
+        L'église sera examinée par
+        l'administration avant d'apparaître
+        dans l'annuaire officiel.
+      </p>
+
+      <form
+        onSubmit={submit}
+        className="simple-form"
+      >
+
+        <label>
+          Nom de l'église
+          <input
+            value={form.name}
+            onChange={(e) =>
+              update(
+                "name",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Ville
+          <input
+            value={form.city}
+            onChange={(e) =>
+              update(
+                "city",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Localisation
+          <input
+            value={form.location}
+            onChange={(e) =>
+              update(
+                "location",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Nom du pasteur
+          <input
+            value={form.pastor}
+            onChange={(e) =>
+              update(
+                "pastor",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Téléphone du pasteur
+          <input
+            value={form.pastorPhone}
+            onChange={(e) =>
+              update(
+                "pastorPhone",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <button className="green">
+          Soumettre l'église
+        </button>
+
+      </form>
+
+      <div className="list">
+
+        {churches.map((church) => (
+          <div
+            className="list-item"
+            key={church.id}
+          >
+            <strong>
+              {church.reference}
+            </strong>
+
+            <span>
+              {church.name}
+              {" · "}
+              {church.city}
+            </span>
+
+            <small>
+              {church.status}
+            </small>
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   COMMANDES
+========================================================= */
+
+function Orders({
+  orders,
+  onPayment,
+  onReceipt,
+}) {
+  return (
+    <div>
+
+      <span className="eyebrow">
+        BOUTIQUE
+      </span>
+
+      <h2>
+        Mes commandes
+      </h2>
+
+      {!orders.length && (
+        <p className="muted">
+          Vous n'avez pas encore de commande.
+        </p>
+      )}
+
+      <div className="order-list">
+
+        {orders.map((order) => (
+          <article
+            className="order-card"
+            key={order.id}
+          >
+
+            <div>
+
+              <strong>
+                {order.reference}
+              </strong>
+
+              <span>
+                {money(order.total)}
+              </span>
+
+            </div>
+
+            <p>
+              Statut :
+              {" "}
+              <strong>
+                {order.status}
+              </strong>
+            </p>
+
+            <p>
+              Paiement :
+              {" "}
+              <strong>
+                {order.paymentStatus}
+              </strong>
+            </p>
+
+            {order.paymentStatus !==
+              "Payé" && (
+              <button
+                className="primary"
+                onClick={() =>
+                  onPayment(
+                    order.id
+                  )
+                }
+              >
+                💳 Payer la commande
+              </button>
+            )}
+
+            {order.receiptCode && (
+              <div className="receipt">
+
+                🧾 Reçu :
+                {" "}
+                <strong>
+                  {order.receiptCode}
+                </strong>
+
+                <br />
+
+                <button
+                  className="green"
+                  onClick={() =>
+                    onReceipt(order)
+                  }
+                >
+                  📄 Télécharger / imprimer le reçu
+                </button>
+
+              </div>
+            )}
+
+          </article>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   CANDIDATURE
+========================================================= */
+
+function ApplicationForm({
+  applications,
+  onSubmit,
+}) {
+  const [title, setTitle] =
+    useState("");
+
+  const [messageText, setMessageText] =
+    useState("");
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!title || !messageText) {
+      return;
+    }
+
+    onSubmit(
+      title,
+      messageText
+    );
+
+    setTitle("");
+    setMessageText("");
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        CANDIDATURE
+      </span>
+
+      <h2>
+        Soumettre une candidature
+      </h2>
+
+      <form
+        className="simple-form"
+        onSubmit={submit}
+      >
+
+        <label>
+          Intitulé
+          <input
+            value={title}
+            onChange={(e) =>
+              setTitle(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Présentation
+          <textarea
+            value={messageText}
+            onChange={(e) =>
+              setMessageText(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <button className="primary">
+          Envoyer la candidature
+        </button>
+
+      </form>
+
+      <div className="list">
+
+        {applications.map((item) => (
+          <div
+            className="list-item"
+            key={item.id}
+          >
+            <strong>
+              {item.reference}
+            </strong>
+
+            <span>
+              {item.title}
+            </span>
+
+            <small>
+              {item.status}
+            </small>
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   RECOMMANDATIONS
+========================================================= */
+
+function RecommendationForm({
+  recommendations,
+  onSubmit,
+}) {
+  const [title, setTitle] =
+    useState("");
+
+  const [text, setText] =
+    useState("");
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!title || !text) {
+      return;
+    }
+
+    onSubmit(title, text);
+
+    setTitle("");
+    setText("");
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        RECOMMANDATIONS
+      </span>
+
+      <h2>
+        Mes recommandations
+      </h2>
+
+      <form
+        className="simple-form"
+        onSubmit={submit}
+      >
+
+        <label>
+          Sujet
+          <input
+            value={title}
+            onChange={(e) =>
+              setTitle(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Recommandation
+          <textarea
+            value={text}
+            onChange={(e) =>
+              setText(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <button className="primary">
+          Transmettre
+        </button>
+
+      </form>
+
+      <div className="list">
+
+        {recommendations.map(
+          (item) => (
+            <div
+              className="list-item"
+              key={item.id}
+            >
+              <strong>
+                {item.reference}
+              </strong>
+
+              <span>
+                {item.title}
+              </span>
+
+              <small>
+                {item.status}
+              </small>
+            </div>
+          )
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   RAPPORT
+========================================================= */
+
+function ReportForm({
+  reports,
+  onSubmit,
+}) {
+  const [title, setTitle] =
+    useState("");
+
+  const [text, setText] =
+    useState("");
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!title || !text) {
+      return;
+    }
+
+    onSubmit(title, text);
+
+    setTitle("");
+    setText("");
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        RAPPORTS
+      </span>
+
+      <h2>
+        Transmettre un rapport
+      </h2>
+
+      <form
+        className="simple-form"
+        onSubmit={submit}
+      >
+
+        <label>
+          Titre
+          <input
+            value={title}
+            onChange={(e) =>
+              setTitle(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Rapport
+          <textarea
+            value={text}
+            onChange={(e) =>
+              setText(
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <button className="primary">
+          Transmettre le rapport
+        </button>
+
+      </form>
+
+      <div className="list">
+
+        {reports.map((item) => (
+          <div
+            className="list-item"
+            key={item.id}
+          >
+            <strong>
+              {item.reference}
+            </strong>
+
+            <span>
+              {item.title}
+            </span>
+
+            <small>
+              {item.status}
+            </small>
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   BOUTIQUE
+========================================================= */
+
+function Shop({
+  products,
+  cart,
+  total,
+  onAdd,
+  onRemove,
+  onQuantity,
+  onOrder,
+  onLogin,
+  connected,
+}) {
+  return (
+    <section className="shop">
+
+      <div className="section-head">
+
+        <div>
+
+          <span className="eyebrow">
+            JADCI STORE
+          </span>
+
+          <h1>
+            Boutique
+          </h1>
+
+        </div>
+
+        <div className="cart-summary">
+
+          🛒 {cart.length} article(s)
+
+          <strong>
+            {money(total)}
+          </strong>
+
+        </div>
+
+      </div>
+
+      <div className="shop-grid">
+
+        <div className="products-grid">
+
+          {products.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAdd={onAdd}
+            />
+          ))}
+
+        </div>
+
+        <aside className="cart">
+
+          <span className="eyebrow">
+            PANIER
+          </span>
+
+          <h2>
+            Votre panier
+          </h2>
+
+          {!cart.length && (
+            <p className="muted">
+              Votre panier est vide.
+            </p>
+          )}
+
+          {cart.map((item) => (
+            <div
+              className="cart-item"
+              key={`${item.id}-${item.size}`}
+            >
+
+              <div>
+
+                <strong>
+                  {item.name}
+                </strong>
+
+                <span>
+                  {item.quantity}
+                  {" × "}
+                  {money(item.price)}
+                </span>
+
+                {item.size && (
+                  <small>
+                    Taille : {item.size}
+                  </small>
+                )}
+
+              </div>
+
+              <div>
+
+                <input
+                  type="number"
+                  min="1"
+                  max={item.stock}
+                  value={item.quantity}
+                  onChange={(e) =>
+                    onQuantity(
+                      item.id,
+                      item.size,
+                      e.target.value
+                    )
+                  }
+                />
+
+                <button
+                  onClick={() =>
+                    onRemove(
+                      item.id,
+                      item.size
+                    )
+                  }
+                >
+                  Retirer
+                </button>
+
+              </div>
+
+            </div>
+          ))}
+
+          <hr />
+
+          <strong>
+            Total : {money(total)}
+          </strong>
+
+          {!connected ? (
+            <button
+              className="primary full"
+              onClick={onLogin}
+            >
+              Se connecter pour commander
+            </button>
+          ) : (
+            <button
+              className="primary full"
+              onClick={onOrder}
+              disabled={!cart.length}
+            >
+              Passer la commande
+            </button>
+          )}
+
+        </aside>
+
+      </div>
+    </section>
+  );
+}
+
+function ProductCard({
+  product,
+  onAdd,
+}) {
+  const [size, setSize] =
+    useState(
+      product.sizes?.length
+        ? product.sizes[0]
+        : ""
+    );
+
+  return (
+    <article className="product-card">
+
+      {product.image ? (
+        <img
+          src={product.image}
+          alt={product.name}
+        />
+      ) : (
+        <div className="product-placeholder">
+          🛍️
+        </div>
+      )}
+
+      <span>
+        {product.category}
+      </span>
+
+      <h3>
+        {product.name}
+      </h3>
+
+      <p>
+        {product.description}
+      </p>
+
+      <strong>
+        {money(product.price)}
+      </strong>
+
+      <small>
+        Stock : {product.stock}
+      </small>
+
+      {product.sizes?.length > 0 && (
+        <label>
+          Taille
+          <select
+            value={size}
+            onChange={(e) =>
+              setSize(e.target.value)
+            }
+          >
+            {product.sizes.map(
+              (item) => (
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {item}
+                </option>
+              )
+            )}
+          </select>
+        </label>
+      )}
+
+      <button
+        className="primary"
+        onClick={() =>
+          onAdd(product, size)
+        }
+        disabled={!product.stock}
+      >
+        {product.stock
+          ? "Ajouter au panier"
+          : "Rupture de stock"}
+      </button>
+
+    </article>
+  );
+}
+
+/* =========================================================
+   ACTUALITÉS
+========================================================= */
+
+function NewsPage({
+  news,
+}) {
+  return (
+    <section className="news-page">
+
+      <span className="eyebrow">
+        ACTUALITÉS
+      </span>
+
+      <h1>
+        Actualités JADCI
+      </h1>
+
+      <div className="news-grid">
+
+        {news
+          .filter(
+            (item) => item.published !== false
+          )
+          .map((item) => (
+            <article
+              className="news-card"
+              key={item.id}
+            >
+
+              {item.image && (
+                <img
+                  src={item.image}
+                  alt={item.title}
+                />
+              )}
+
+              <div>
+
+                <small>
+                  {item.date}
+                </small>
+
+                <h2>
+                  {item.title}
+                </h2>
+
+                <p>
+                  {item.text}
+                </p>
+
+                {item.video && (
+                  <a
+                    href={item.video}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    ▶ Voir la vidéo
+                  </a>
+                )}
+
+                {item.document && (
+                  <a
+                    href={item.document}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    📄 Document
+                  </a>
+                )}
+
+              </div>
+
+            </article>
+          ))}
+
+      </div>
+
+    </section>
+  );
+}
+
+/* =========================================================
+   MÉDIAT
+========================================================= */
+
+function MediaPage() {
+  return (
+    <section className="media-page">
+
+      <span className="eyebrow">
+        MÉDIAT
+      </span>
+
+      <h1>
+        JADCI en direct
+      </h1>
+
+      <p className="muted">
+        Retrouvez les contenus vidéo,
+        directs et réseaux de la communauté.
+      </p>
+
+      <div className="media-grid">
+
+        <a
+          className="media-card"
+          href="https://www.facebook.com/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span>f</span>
+          <h2>
+            Facebook
+          </h2>
+          <p>
+            Retrouvez les publications
+            et directs JADCI.
+          </p>
+        </a>
+
+        <a
+          className="media-card"
+          href="https://www.youtube.com/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span>▶</span>
+          <h2>
+            YouTube
+          </h2>
+          <p>
+            Vidéos, enseignements,
+            événements et directs.
+          </p>
+        </a>
+
+        <div className="media-card">
+          <span>LIVE</span>
+          <h2>
+            Direct JADCI
+          </h2>
+          <p>
+            Le module pourra accueillir
+            un flux vidéo officiel.
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+  );
+}
+
+/* =========================================================
+   ANNUAIRE ÉGLISES
+========================================================= */
+
+function ChurchDirectory({
+  churches,
+}) {
+  const validated =
+    churches.filter(
+      (church) =>
+        church.status === "Validée"
+    );
+
+  return (
+    <section className="church-directory">
+
+      <span className="eyebrow">
+        ANNUAIRE
+      </span>
+
+      <h1>
+        Églises JADCI
+      </h1>
+
+      <p className="muted">
+        Les églises apparaissent ici après
+        validation par l'administration.
+      </p>
+
+      <div className="map-placeholder">
+        🗺️
+        <strong>
+          Carte interactive
+        </strong>
+        <span>
+          Le module cartographique réel
+          pourra être connecté à une API
+          de cartographie dans la version
+          serveur.
+        </span>
+      </div>
+
+      <div className="church-grid">
+
+        {validated.map((church) => (
+          <article
+            className="church-card"
+            key={church.id}
+          >
+
+            <span>
+              ⛪
+            </span>
+
+            <h2>
+              {church.name}
+            </h2>
+
+            <p>
+              {church.city}
+            </p>
+
+            {church.location && (
+              <small>
+                {church.location}
+              </small>
+            )}
+
+            {church.pastor && (
+              <small>
+                Pasteur : {church.pastor}
+              </small>
+            )}
+
+          </article>
+        ))}
+
+      </div>
+
+      {!validated.length && (
+        <p className="muted">
+          Aucune église validée pour le moment.
+        </p>
+      )}
+
+    </section>
+  );
+}
+
+/* =========================================================
+   LOGIN ADMIN
+========================================================= */
+
+function AdminLogin({
+  onLogin,
+  onBack,
+}) {
+  const [matricule, setMatricule] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  function submit(event) {
+    event.preventDefault();
+
+    onLogin({
+      matricule,
+      password,
+    });
+  }
+
+  return (
+    <section className="admin-login">
+
+      <div className="admin-login-card">
+
+        <span className="eyebrow">
+          PORTAIL PRIVÉ
+        </span>
+
+        <h1>
+          Administration JADCI
+        </h1>
+
+        <p className="muted">
+          Accès réservé aux administrateurs
+          autorisés.
+        </p>
+
+        <form onSubmit={submit}>
+
+          <label>
+            Matricule
+            <input
+              value={matricule}
+              onChange={(e) =>
+                setMatricule(
+                  e.target.value
+                )
+              }
+              autoComplete="username"
+              required
+            />
+          </label>
+
+          <label>
+            Mot de passe
+            <input
+              type="password"
+              value={password}
+              onChange={(e) =>
+                setPassword(
+                  e.target.value
+                )
+              }
+              autoComplete="current-password"
+              required
+            />
+          </label>
+
+          <button
+            className="primary full"
+            type="submit"
+          >
+            Ouvrir le portail
+          </button>
+
+        </form>
+
+        <button
+          type="button"
+          onClick={onBack}
+        >
+          ← Retour au site
+        </button>
+
+      </div>
+
+    </section>
+  );
+}
+
+/* =========================================================
+   PORTAIL ADMIN
+========================================================= */
+
+function AdminPortal({
+  session,
+  data,
+  onValidateChurch,
+  onRejectChurch,
+  onDeleteProduct,
+  onAddProduct,
+  onUpdateProduct,
+  onDeleteNews,
+  onAddNews,
+  onExport,
+}) {
+  const [section, setSection] =
+    useState("dashboard");
+
+  const isGeneral =
+    session.role === "general";
+
+  const isMarketing =
+    session.role === "marketing";
+
+  const isCommunication =
+    session.role === "communication";
+
+  return (
+    <section className="admin-portal">
+
+      <div className="admin-header">
+
+        <div>
+
+          <span className="eyebrow">
+            JADCI · ADMINISTRATION
+          </span>
+
+          <h1>
+            {session.label}
+          </h1>
+
+          <p>
+            Session :
+            {" "}
+            <strong>
+              {session.matricule}
+            </strong>
+          </p>
+
+        </div>
+
+        <div className="admin-status">
+          ● SYSTÈME ACTIF
+        </div>
+
+      </div>
+
+      <div className="admin-layout">
+
+        <aside className="admin-menu">
+
+          <button
+            className={
+              section === "dashboard"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setSection("dashboard")
+            }
+          >
+            ◈ Tableau de bord
+          </button>
+
+          {isGeneral && (
+            <>
+              <button
+                className={
+                  section === "users"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setSection("users")
+                }
+              >
+                👥 Utilisateurs
+              </button>
+
+              <button
+                className={
+                  section === "churches"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setSection("churches")
+                }
+              >
+                ⛪ Églises
+              </button>
+
+              <button
+                className={
+                  section === "reports"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setSection("reports")
+                }
+              >
+                📊 Rapports
+              </button>
+
+              <button
+                className={
+                  section === "exports"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setSection("exports")
+                }
+              >
+                📥 Exports
+              </button>
+            </>
+          )}
+
+          {(isGeneral ||
+            isMarketing) && (
+            <button
+              className={
+                section === "shop"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setSection("shop")
+              }
+            >
+              🛒 Boutique
+            </button>
+          )}
+
+          {(isGeneral ||
+            isCommunication) && (
+            <button
+              className={
+                section === "news"
+                  ? "active"
+                  : ""
+              }
+              onClick={() =>
+                setSection("news")
+              }
+            >
+              📢 Communication
+            </button>
+          )}
+
+          <button
+            className={
+              section === "activity"
+                ? "active"
+                : ""
+            }
+            onClick={() =>
+              setSection("activity")
+            }
+          >
+            🛡️ Journal
+          </button>
+
+        </aside>
+
+        <div className="admin-content">
+
+          {section === "dashboard" && (
+            <AdminDashboard
+              data={data}
+              session={session}
+            />
+          )}
+
+          {section === "users" &&
+            isGeneral && (
+              <AdminUsers
+                users={data.users}
+              />
+            )}
+
+          {section === "churches" &&
+            isGeneral && (
+              <AdminChurches
+                churches={data.churches}
+                onValidate={
+                  onValidateChurch
+                }
+                onReject={
+                  onRejectChurch
+                }
+              />
+            )}
+
+          {section === "reports" &&
+            isGeneral && (
+              <AdminReports
+                data={data}
+              />
+            )}
+
+          {section === "exports" &&
+            isGeneral && (
+              <AdminExports
+                onExport={onExport}
+              />
+            )}
+
+          {section === "shop" &&
+            (isGeneral ||
+              isMarketing) && (
+              <AdminShop
+                data={data}
+                onDelete={
+                  onDeleteProduct
+                }
+                onAdd={onAddProduct}
+                onUpdate={
+                  onUpdateProduct
+                }
+              />
+            )}
+
+          {section === "news" &&
+            (isGeneral ||
+              isCommunication) && (
+              <AdminNews
+                data={data}
+                onDelete={
+                  onDeleteNews
+                }
+                onAdd={onAddNews}
+              />
+            )}
+
+          {section === "activity" && (
+            <AdminActivity
+              activity={data.activityLog}
+            />
+          )}
+
+        </div>
+
+      </div>
+
+    </section>
+  );
+}
+
+/* =========================================================
+   ADMIN DASHBOARD
+========================================================= */
+
+function AdminDashboard({
+  data,
+  session,
+}) {
+  const revenue =
+    data.payments
+      .filter(
+        (payment) =>
+          payment.status === "Payé"
+      )
+      .reduce(
+        (sum, payment) =>
+          sum + Number(payment.amount || 0),
+        0
+      );
+
+  const pendingRequests =
+    data.requests.filter(
+      (item) =>
+        item.status === "En attente"
+    ).length;
+
+  const pendingChurches =
+    data.churches.filter(
+      (item) =>
+        item.status === "En attente"
+    ).length;
+
+  const today =
+    new Date().toDateString();
+
+  const ordersToday =
+    data.orders.filter(
+      (order) =>
+        new Date(
+          order.createdAt
+        ).toDateString() === today
+    ).length;
+
+  return (
+    <div className="admin-dashboard">
+
+      <div className="admin-welcome">
+
+        <span className="eyebrow">
+          CONSOLE
+        </span>
+
+        <h2>
+          Centre de contrôle
+        </h2>
+
+        <p>
+          Vue générale du portail JADCI.
+        </p>
+
+      </div>
+
+      <div className="admin-stats">
+
+        <AdminMetric
+          label="Utilisateurs"
+          value={data.users.length}
+          icon="👥"
+        />
+
+        <AdminMetric
+          label="Requêtes"
+          value={pendingRequests}
+          icon="📝"
+        />
+
+        <AdminMetric
+          label="Projets"
+          value={data.projects.length}
+          icon="💡"
+        />
+
+        <AdminMetric
+          label="Églises en attente"
+          value={pendingChurches}
+          icon="⛪"
+        />
+
+        <AdminMetric
+          label="Commandes du jour"
+          value={ordersToday}
+          icon="🛒"
+        />
+
+        <AdminMetric
+          label="Paiements"
+          value={data.payments.length}
+          icon="💳"
+        />
+
+        <AdminMetric
+          label="Candidatures"
+          value={data.applications.length}
+          icon="📄"
+        />
+
+        <AdminMetric
+          label="Annonces"
+          value={data.news.length}
+          icon="📢"
+        />
+
+      </div>
+
+      {session.role === "general" && (
+        <div className="revenue-card">
+
+          <span>
+            CHIFFRE D'AFFAIRES
+          </span>
+
+          <strong>
+            {money(revenue)}
+          </strong>
+
+          <small>
+            Paiements enregistrés
+            sur les commandes boutique.
+          </small>
+
+        </div>
+      )}
+
+      <div className="admin-panels">
+
+        <div className="admin-panel">
+
+          <h3>
+            État du système
+          </h3>
+
+          <div className="system-row">
+            <span>
+              Base locale
+            </span>
+            <strong>
+              ● Active
+            </strong>
+          </div>
+
+          <div className="system-row">
+            <span>
+              Paiements
+            </span>
+            <strong>
+              ● Actifs
+            </strong>
+          </div>
+
+          <div className="system-row">
+            <span>
+              Boutique
+            </span>
+            <strong>
+              ● Active
+            </strong>
+          </div>
+
+          <div className="system-row">
+            <span>
+              Sécurité
+            </span>
+            <strong>
+              ● Session protégée
+            </strong>
+          </div>
+
+        </div>
+
+        <div className="admin-panel">
+
+          <h3>
+            Modules
+          </h3>
+
+          <div className="module-grid">
+
+            <span>
+              Utilisateurs
+            </span>
+
+            <span>
+              Boutique
+            </span>
+
+            <span>
+              Paiements
+            </span>
+
+            <span>
+              Actualités
+            </span>
+
+            <span>
+              Églises
+            </span>
+
+            <span>
+              Projets
+            </span>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+function AdminMetric({
+  label,
+  value,
+  icon,
+}) {
+  return (
+    <div className="admin-metric">
+
+      <span>
+        {icon}
+      </span>
+
+      <strong>
+        {value}
+      </strong>
+
+      <small>
+        {label}
+      </small>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN USERS
+========================================================= */
+
+function AdminUsers({
+  users,
+}) {
+  return (
+    <div>
+
+      <span className="eyebrow">
+        UTILISATEURS
+      </span>
+
+      <h2>
+        Membres inscrits
+      </h2>
+
+      <div className="admin-table">
+
+        <div className="admin-table-head">
+          <span>
+            Matricule
+          </span>
+          <span>
+            Nom
+          </span>
+          <span>
+            Espace
+          </span>
+          <span>
+            Contact
+          </span>
+        </div>
+
+        {users.map((user) => (
+          <div
+            className="admin-table-row"
+            key={user.id}
+          >
+
+            <strong>
+              {user.matricule}
+            </strong>
+
+            <span>
+              {user.firstName}{" "}
+              {user.lastName}
+            </span>
+
+            <span>
+              {user.role === "youth"
+                ? "Jeune"
+                : "Responsable"}
+            </span>
+
+            <span>
+              {user.email}
+              <br />
+              {user.phone}
+            </span>
+
+          </div>
+        ))}
+
+        {!users.length && (
+          <p className="muted">
+            Aucun utilisateur.
+          </p>
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN ÉGLISES
+========================================================= */
+
+function AdminChurches({
+  churches,
+  onValidate,
+  onReject,
+}) {
+  return (
+    <div>
+
+      <span className="eyebrow">
+        ÉGLISES
+      </span>
+
+      <h2>
+        Validation des églises
+      </h2>
+
+      {churches.map((church) => (
+        <div
+          className="admin-row"
+          key={church.id}
+        >
+
+          <div>
+
+            <strong>
+              {church.name}
+            </strong>
+
+            <span>
+              {church.city}
+              {" · "}
+              {church.pastor || "Pasteur non renseigné"}
+              {" · "}
+              {church.submittedBy}
+            </span>
+
+          </div>
+
+          {church.status ===
+          "En attente" ? (
+            <div>
+
+              <button
+                className="green"
+                onClick={() =>
+                  onValidate(
+                    church.id
+                  )
+                }
+              >
+                Valider
+              </button>
+
+              <button
+                className="danger"
+                onClick={() =>
+                  onReject(
+                    church.id
+                  )
+                }
+              >
+                Rejeter
+              </button>
+
+            </div>
+          ) : (
+            <span className="status-ok">
+              {church.status}
+            </span>
+          )}
+
+        </div>
+      ))}
+
+      {!churches.length && (
+        <p className="muted">
+          Aucune église soumise.
+        </p>
+      )}
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN RAPPORTS
+========================================================= */
+
+function AdminReports({
+  data,
+}) {
+  return (
+    <div>
+
+      <span className="eyebrow">
+        RAPPORTS
+      </span>
+
+      <h2>
+        Rapports et activités
+      </h2>
+
+      <div className="admin-section">
+
+        <h3>
+          Projets
+        </h3>
+
+        {data.projects.map(
+          (project) => (
+            <div
+              className="admin-row"
+              key={project.id}
+            >
+              <div>
+                <strong>
+                  {project.reference}
+                </strong>
+
+                <span>
+                  {project.title}
+                  {" · "}
+                  {project.status}
+                </span>
+              </div>
+            </div>
+          )
+        )}
+
+      </div>
+
+      <div className="admin-section">
+
+        <h3>
+          Rapports transmis
+        </h3>
+
+        {data.reports.map(
+          (report) => (
+            <div
+              className="admin-row"
+              key={report.id}
+            >
+
+              <div>
+                <strong>
+                  {report.reference}
+                </strong>
+
+                <span>
+                  {report.title}
+                  {" · "}
+                  {report.matricule}
+                </span>
+              </div>
+
+              <span>
+                {report.status}
+              </span>
+
+            </div>
+          )
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN EXPORTS
+========================================================= */
+
+function AdminExports({
+  onExport,
+}) {
+  const exportsList = [
+    ["users", "👥 Utilisateurs"],
+    ["churches", "⛪ Églises"],
+    ["requests", "📝 Requêtes"],
+    ["projects", "💡 Projets"],
+    ["orders", "🛒 Commandes"],
+    ["payments", "💳 Paiements"],
+    ["applications", "📄 Candidatures"],
+    ["recommendations", "⭐ Recommandations"],
+    ["reports", "📊 Rapports"],
+  ];
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        DONNÉES
+      </span>
+
+      <h2>
+        Exports administratifs
+      </h2>
+
+      <p className="muted">
+        Téléchargez les données pour
+        les exploiter dans Excel.
+      </p>
+
+      <div className="export-grid">
+
+        {exportsList.map(
+          ([type, label]) => (
+            <button
+              key={type}
+              onClick={() =>
+                onExport(type)
+              }
+            >
+              📥 {label}
+            </button>
+          )
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN BOUTIQUE
+========================================================= */
+
+function AdminShop({
+  data,
+  onDelete,
+  onAdd,
+  onUpdate,
+}) {
+  const [form, setForm] =
+    useState({
+      name: "",
+      price: "",
+      stock: "",
+      category: "Vêtement",
+      description: "",
+      image: "",
+    });
+
+  function update(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!form.name) return;
+
+    onAdd(form);
+
+    setForm({
+      name: "",
+      price: "",
+      stock: "",
+      category: "Vêtement",
+      description: "",
+      image: "",
+    });
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        MARKETING
+      </span>
+
+      <h2>
+        Gestion de la boutique
+      </h2>
+
+      <form
+        className="simple-form admin-product-form"
+        onSubmit={submit}
+      >
+
+        <h3>
+          Ajouter un produit
+        </h3>
+
+        <label>
+          Nom
+          <input
+            value={form.name}
+            onChange={(e) =>
+              update(
+                "name",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Prix
+          <input
+            type="number"
+            value={form.price}
+            onChange={(e) =>
+              update(
+                "price",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Stock
+          <input
+            type="number"
+            value={form.stock}
+            onChange={(e) =>
+              update(
+                "stock",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Catégorie
+          <select
+            value={form.category}
+            onChange={(e) =>
+              update(
+                "category",
+                e.target.value
+              )
+            }
+          >
+            <option>
+              Vêtement
+            </option>
+            <option>
+              Accessoire
+            </option>
+            <option>
+              Livre
+            </option>
+            <option>
+              Papeterie
+            </option>
+            <option>
+              Autre
+            </option>
+          </select>
+        </label>
+
+        <label>
+          Image
+          <input
+            placeholder="URL de l'image"
+            value={form.image}
+            onChange={(e) =>
+              update(
+                "image",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Description
+          <textarea
+            value={form.description}
+            onChange={(e) =>
+              update(
+                "description",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <button className="primary">
+          Ajouter le produit
+        </button>
+
+      </form>
+
+      <div className="admin-section">
+
+        <h3>
+          Produits
+        </h3>
+
+        {data.products.map(
+          (product) => (
+            <div
+              className="admin-row"
+              key={product.id}
+            >
+
+              <div>
+
+                <strong>
+                  {product.name}
+                </strong>
+
+                <span>
+                  {money(product.price)}
+                  {" · "}
+                  Stock : {product.stock}
+                </span>
+
+              </div>
+
+              <div>
+
+                <button
+                  onClick={() =>
+                    onUpdate(
+                      product.id,
+                      {
+                        stock:
+                          Number(
+                            product.stock
+                          ) + 1,
+                      }
+                    )
+                  }
+                >
+                  + Stock
+                </button>
+
+                <button
+                  className="danger"
+                  onClick={() =>
+                    onDelete(
+                      product.id
+                    )
+                  }
+                >
+                  Supprimer
+                </button>
+
+              </div>
+
+            </div>
+          )
+        )}
+
+      </div>
+
+      <div className="admin-section">
+
+        <h3>
+          Commandes
+        </h3>
+
+        {data.orders.map(
+          (order) => (
+            <div
+              className="admin-row"
+              key={order.id}
+            >
+
+              <div>
+                <strong>
+                  {order.reference}
+                </strong>
+
+                <span>
+                  {order.matricule}
+                  {" · "}
+                  {money(order.total)}
+                </span>
+              </div>
+
+              <span>
+                {order.paymentStatus}
+              </span>
+
+            </div>
+          )
+        )}
+
+        {!data.orders.length && (
+          <p className="muted">
+            Aucune commande.
+          </p>
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   ADMIN COMMUNICATION
+========================================================= */
+
+function AdminNews({
+  data,
+  onDelete,
+  onAdd,
+}) {
+  const [form, setForm] =
+    useState({
+      title: "",
+      text: "",
+      image: "",
+      video: "",
+      document: "",
+      type: "actualite",
+    });
+
+  function update(field, value) {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  }
+
+  function submit(event) {
+    event.preventDefault();
+
+    if (!form.title || !form.text) {
+      return;
+    }
+
+    onAdd(form);
+
+    setForm({
+      title: "",
+      text: "",
+      image: "",
+      video: "",
+      document: "",
+      type: "actualite",
+    });
+  }
+
+  return (
+    <div>
+
+      <span className="eyebrow">
+        COMMUNICATION
+      </span>
+
+      <h2>
+        Actualités et annonces
+      </h2>
+
+      <form
+        className="simple-form"
+        onSubmit={submit}
+      >
+
+        <h3>
+          Nouvelle publication
+        </h3>
+
+        <label>
+          Titre
+          <input
+            value={form.title}
+            onChange={(e) =>
+              update(
+                "title",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Texte
+          <textarea
+            value={form.text}
+            onChange={(e) =>
+              update(
+                "text",
+                e.target.value
+              )
+            }
+            required
+          />
+        </label>
+
+        <label>
+          Image
+          <input
+            placeholder="URL image"
+            value={form.image}
+            onChange={(e) =>
+              update(
+                "image",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Vidéo
+          <input
+            placeholder="Lien vidéo"
+            value={form.video}
+            onChange={(e) =>
+              update(
+                "video",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <label>
+          Document
+          <input
+            placeholder="Lien document"
+            value={form.document}
+            onChange={(e) =>
+              update(
+                "document",
+                e.target.value
+              )
+            }
+          />
+        </label>
+
+        <button className="primary">
+          Publier
+        </button>
+
+      </form>
+
+      <div className="admin-section">
+
+        <h3>
+          Publications
+        </h3>
+
+        {data.news.map((item) => (
+          <div
+            className="admin-row"
+            key={item.id}
+          >
+
+            <div>
+
+              <strong>
+                {item.title}
+              </strong>
+
+              <span>
+                {item.date}
+              </span>
+
+            </div>
+
+            <button
+              className="danger"
+              onClick={() =>
+                onDelete(item.id)
+              }
+            >
+              Supprimer
+            </button>
+
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   JOURNAL ADMIN
+========================================================= */
+
+function AdminActivity({
+  activity,
+}) {
+  return (
+    <div>
+
+      <span className="eyebrow">
+        SÉCURITÉ
+      </span>
+
+      <h2>
+        Journal des actions
+      </h2>
+
+      <div className="list">
+
+        {activity.map((item) => (
+          <div
+            className="list-item"
+            key={item.id}
+          >
+
+            <strong>
+              {item.action}
+            </strong>
+
+            <span>
+              {item.details}
+            </span>
+
+            <small>
+              {item.admin}
+              {" · "}
+              {formatDate(
+                item.date
+              )}
+            </small>
+
+          </div>
+        ))}
+
+        {!activity.length && (
+          <p className="muted">
+            Aucune activité enregistrée.
+          </p>
+        )}
+
+      </div>
+
+    </div>
+  );
+}
+
+/* =========================================================
+   SÉCURITÉ HTML POUR LE REÇU
+========================================================= */
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+export default App;
